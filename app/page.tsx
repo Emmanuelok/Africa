@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { CommodityTicker } from "@/components/CommodityTicker";
 import { TradeOSDiagram } from "@/components/TradeOSDiagram";
+import { WaitlistForm } from "@/components/WaitlistForm";
 
 export default function HomePage() {
   return (
@@ -266,6 +267,32 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* TRUST SIGNALS */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-14 md:px-6">
+          <p className="text-center text-xs uppercase tracking-wider text-ink-500">
+            Designed in collaboration with
+          </p>
+          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+            {[
+              "Afreximbank ADAPT",
+              "AfCFTA Secretariat",
+              "tralac",
+              "EAC Business Council",
+              "Ghana Chamber of Commerce",
+              "Kenya Trade Coordinator"
+            ].map((p) => (
+              <div
+                key={p}
+                className="rounded-xl border border-dashed border-ink-300 bg-sand-50/60 px-3 py-3 text-center text-xs font-medium text-ink-700"
+              >
+                {p}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* PROOF / SOCIAL */}
       <section className="bg-ink-950 text-white">
         <div className="mx-auto max-w-7xl px-4 py-16 md:px-6">
@@ -278,22 +305,40 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* CTA + WAITLIST */}
       <section className="bg-pattern">
-        <div className="mx-auto max-w-4xl px-4 py-20 text-center md:px-6">
-          <PackageSearch className="mx-auto h-10 w-10 text-terracotta-600" />
-          <h2 className="mt-4 font-display text-3xl font-semibold md:text-4xl">
-            Ship under AfCFTA. In your language. In 60 seconds.
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-ink-700">
-            Whether you&apos;re a Ghanaian shea cooperative, a Kenyan coffee estate, or a Zambian
-            smelter — start with a free determination. No card, no commitment.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button href="/afriorigin" size="lg">Try AfriOrigin free</Button>
-            <Button href="/pricing" size="lg" variant="outline">See pricing</Button>
-            <Button href="/research" size="lg" variant="ghost">Read the research</Button>
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 md:grid-cols-[1.2fr_1fr] md:px-6">
+          <div>
+            <PackageSearch className="h-10 w-10 text-terracotta-600" />
+            <h2 className="mt-4 font-display text-3xl font-semibold md:text-4xl">
+              Ship under AfCFTA. In your language. In 60 seconds.
+            </h2>
+            <p className="mt-4 max-w-xl text-ink-700">
+              Whether you&apos;re a Ghanaian shea cooperative, a Kenyan coffee estate, or a Zambian
+              smelter — start with a free determination. No card, no commitment.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button href="/afriorigin" size="lg">Try AfriOrigin free</Button>
+              <Button href="/pricing" size="lg" variant="outline">See pricing</Button>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-600">
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-savanna-600" /> 3 months free for early-access SMEs</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-savanna-600" /> Founding-cohort pricing locked for life</span>
+            </div>
           </div>
+
+          <Card>
+            <div className="text-xs uppercase tracking-wide text-ink-500">Early access</div>
+            <h3 className="mt-1 font-display text-lg font-semibold">Reserve your spot.</h3>
+            <p className="mt-1 text-sm text-ink-600">
+              We onboard SMEs in cohorts. Tell us where you ship from.
+            </p>
+            <div className="mt-4">
+              <WaitlistForm source="landing-cta" />
+            </div>
+          </Card>
+        </div>
+        <div className="mx-auto max-w-4xl px-4 pb-20 text-center md:px-6">
           <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-ink-500">
             <span>
               <Link href="/marketplace" className="underline-offset-2 hover:underline">Marketplace</Link> ·{" "}

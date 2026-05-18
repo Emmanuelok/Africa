@@ -12,6 +12,11 @@ export function Footer() {
             Africa&apos;s trade engine. AfriOrigin is module one of the open TradeOS stack for the
             1.3B-person AfCFTA market.
           </p>
+          <div className="mt-5 flex items-center gap-3 text-xs">
+            <Link href="/status" className="inline-flex items-center gap-1.5 rounded-full bg-savanna-950 px-2.5 py-1 text-savanna-300 hover:bg-savanna-900">
+              <span className="h-2 w-2 rounded-full bg-savanna-400" /> All systems operational
+            </Link>
+          </div>
         </div>
 
         <div>
@@ -20,17 +25,21 @@ export function Footer() {
             <li><Link href="/afriorigin" className="hover:text-white">AfriOrigin</Link></li>
             <li><Link href="/pricing" className="hover:text-white">Pricing</Link></li>
             <li><Link href="/developers" className="hover:text-white">Developer API</Link></li>
-            <li><Link href="/dashboard" className="hover:text-white">Dashboard</Link></li>
+            <li><Link href="/commodities" className="hover:text-white">Live Africa Map</Link></li>
+            <li><Link href="/changelog" className="hover:text-white">Changelog</Link></li>
+            <li><Link href="/status" className="hover:text-white">Status</Link></li>
           </ul>
         </div>
 
         <div>
-          <div className="text-sm font-semibold text-white">Roadmap</div>
+          <div className="text-sm font-semibold text-white">Company</div>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><Link href="/marketplace" className="hover:text-white">Marketplace</Link></li>
-            <li><Link href="/suppliers" className="hover:text-white">Verified suppliers</Link></li>
-            <li><Link href="/commodities" className="hover:text-white">Commodity prices</Link></li>
-            <li><Link href="/logistics" className="hover:text-white">Logistics</Link></li>
+            <li><Link href="/about" className="hover:text-white">About</Link></li>
+            <li><Link href="/research" className="hover:text-white">Research</Link></li>
+            <li><Link href="/contact" className="hover:text-white">Contact</Link></li>
+            <li><Link href="/security" className="hover:text-white">Security</Link></li>
+            <li><Link href="/terms" className="hover:text-white">Terms</Link></li>
+            <li><Link href="/privacy" className="hover:text-white">Privacy</Link></li>
           </ul>
         </div>
 
@@ -47,7 +56,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-ink-800 px-4 py-6 text-center text-xs text-ink-400 md:px-6">
-        © {new Date().getFullYear()} Sokoni — Built for the African Continental Free Trade Area.
+        © {new Date().getFullYear()} Sokoni Holdings Ltd — Built for the African Continental Free Trade Area.
       </div>
     </footer>
   );

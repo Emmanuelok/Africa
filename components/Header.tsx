@@ -3,6 +3,7 @@ import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { Badge } from "@/components/ui/Badge";
+import { MobileMenu } from "@/components/MobileMenu";
 
 const PRIMARY = [
   { href: "/afriorigin", label: "AfriOrigin", hot: true },
@@ -11,11 +12,9 @@ const PRIMARY = [
 ];
 
 const SECONDARY = [
+  { href: "/commodities", label: "Live Map" },
   { href: "/marketplace", label: "Marketplace" },
-  { href: "/suppliers", label: "Suppliers" },
-  { href: "/commodities", label: "Commodities" },
-  { href: "/afcfta", label: "AfCFTA Reference" },
-  { href: "/logistics", label: "Logistics" },
+  { href: "/afcfta", label: "AfCFTA" },
   { href: "/research", label: "Research" }
 ];
 
@@ -56,13 +55,16 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <LocaleSwitcher />
-          <Button href="/dashboard" variant="ghost" size="sm" className="hidden sm:inline-flex">
+          <div className="hidden sm:block">
+            <LocaleSwitcher />
+          </div>
+          <Button href="/signin" variant="ghost" size="sm" className="hidden lg:inline-flex">
             Sign in
           </Button>
-          <Button href="/afriorigin" size="sm">
+          <Button href="/signup" size="sm" className="hidden sm:inline-flex">
             Start free
           </Button>
+          <MobileMenu />
         </div>
       </div>
     </header>
