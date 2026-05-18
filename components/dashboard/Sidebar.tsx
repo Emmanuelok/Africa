@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileCheck2,
+  FileSpreadsheet,
   ShieldCheck,
   Key,
   Users2,
@@ -18,6 +19,7 @@ const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/determinations", label: "Determinations", icon: ShieldCheck },
   { href: "/dashboard/certificates", label: "Certificates", icon: FileCheck2 },
+  { href: "/dashboard/bulk", label: "Bulk classify", icon: FileSpreadsheet },
   { href: "/afriorigin", label: "New shipment", icon: Wand2, primary: true },
   { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
   { href: "/dashboard/team", label: "Team", icon: Users2 },

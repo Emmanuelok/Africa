@@ -53,12 +53,14 @@ export default async function CertificatesPage() {
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-ink-100 pt-3 text-xs">
                 <span className="text-ink-500">{formatDate(c.createdAt)}</span>
-                <Link
-                  href={`/afriorigin/certificate?ref=${c.reference}`}
+                <a
+                  href={`/api/certificates/${c.id}/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 font-medium text-terracotta-700 hover:underline"
                 >
-                  <Download className="h-3.5 w-3.5" /> View / print
-                </Link>
+                  <Download className="h-3.5 w-3.5" /> Download PDF
+                </a>
               </div>
             </Card>
           ))}

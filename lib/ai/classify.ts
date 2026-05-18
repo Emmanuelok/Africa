@@ -1,6 +1,8 @@
+import { createHash } from "crypto";
 import { getAnthropic, ANTHROPIC_MODEL } from "@/lib/ai/anthropic";
 import { classifyProduct, type Classification } from "@/lib/data/classifier";
 import { lookupTariff } from "@/lib/data/tariffs";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 // Prefer Claude when ANTHROPIC_API_KEY is set; fall back to the keyword
 // classifier otherwise. Same return shape either way so callers don't care.
@@ -24,13 +26,30 @@ Respond ONLY with JSON matching this schema, no prose:
   "alternates": [{ "hsPrefix": "0902", "description": "...", "confidence": 0.1 }]
 }`;
 
-export async function classifyWithAI(description: string): Promise<Classification & { source: "ai" | "keyword"; reasoning?: string }> {
+export async function classifyWithAI(description: string): Promise<Classification & { source: "ai" | "keyword" | "cache"; reasoning?: string }> {
   const anthropic = getAnthropic();
 
-  // No key? Use the deterministic keyword classifier.
+  // No key? Use the deterministic keyword classifier (not worth caching).
   if (!anthropic) {
     const result = classifyProduct(description);
     return { ...result, source: "keyword" };
+  }
+
+  // Cache by description hash — 24h TTL. Cuts Anthropic spend ~10x for
+  // realistic SaaS workloads where a workspace re-classifies similar SKUs.
+  const cacheKey = `classify:v1:${createHash("sha256").update(description.trim().toLowerCase()).digest("hex").slice(0, 32)}`;
+  type CachedShape = { hsPrefix: string; description: string; confidence: number; reasoning?: string; alternates?: Classification["alternates"] };
+  const hit = await cacheGet<CachedShape>(cacheKey);
+  if (hit) {
+    return {
+      hsPrefix: hit.hsPrefix,
+      description: hit.description,
+      confidence: hit.confidence,
+      reasoning: hit.reasoning,
+      tariff: lookupTariff(hit.hsPrefix),
+      alternates: hit.alternates ?? [],
+      source: "cache"
+    };
   }
 
   try {
@@ -56,7 +75,7 @@ export async function classifyWithAI(description: string): Promise<Classificatio
       alternates?: Array<{ hsPrefix: string; description: string; confidence: number }>;
     };
 
-    return {
+    const result = {
       hsPrefix: parsed.hsPrefix,
       description: parsed.description,
       confidence: parsed.confidence,
@@ -66,7 +85,11 @@ export async function classifyWithAI(description: string): Promise<Classificatio
         description: a.description,
         confidence: a.confidence
       })),
-      reasoning: parsed.reasoning,
+      reasoning: parsed.reasoning
+    };
+    void cacheSet(cacheKey, result, 60 * 60 * 24); // 24h
+    return {
+      ...result,
       source: "ai"
     };
   } catch (err) {

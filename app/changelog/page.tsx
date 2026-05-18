@@ -13,6 +13,36 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.10.0",
+    type: "feature",
+    title: "Server-side PDF certificates, AI cache, Stripe portal, CSV bulk",
+    bullets: [
+      "@react-pdf/renderer wired for AfCFTA Certificate generation — Annex II Appendix I format with all 9 boxes, electronic-endorsement stamp, and footer reference",
+      "GET /api/certificates/[id]/pdf streams real PDF buffers for any saved or demo certificate",
+      "Upstash-backed cache layer (lib/cache.ts) with in-memory fallback — wraps classifyWithAI for 24h TTL, ~10x Anthropic cost reduction on repeated SKUs",
+      "Source field on classification responses (ai | cache | keyword) so callers can see what produced the answer",
+      "/api/billing/portal opens Stripe Customer Portal; lazily creates a Stripe customer for new workspaces on first click",
+      "/dashboard/bulk — CSV bulk classification with drag-and-drop upload, plan-tiered row limits (5/50/500/2000), preview, results table, and enriched-CSV download",
+      "Per-row persistence into the determinations history so bulk classifications appear alongside one-off shipments"
+    ]
+  },
+  {
+    date: "18 May 2026",
+    version: "0.9.0",
+    type: "feature",
+    title: "Real SaaS dashboard + v1 public API + workspace persistence",
+    bullets: [
+      "Dashboard rebuild with sidebar nav: Overview, Determinations, Certificates, Bulk, API Keys, Team, Billing, Settings",
+      "getSessionUser() helper with workspace auto-provisioning and coherent demo fallback",
+      "Wizard outputs persist to /api/determinations on step 3 (fire-and-forget)",
+      "API key management: sk_(live|test)_<24> format, SHA-256 hash at rest, constant-time compare, one-time plaintext reveal",
+      "v1 public API with key auth + usage logging: /api/v1/classify, /api/v1/determine-origin, /api/v1/tariff",
+      "Per-key rate limiting at 60 req/min via Upstash",
+      "Demo data set (5 determinations, 3 certificates, 2 API keys) so every dashboard page renders without a database"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.8.0",
     type: "feature",
     title: "Launch-blocker batch: email, real auth, rate limits, captcha, Sentry, cron",
