@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 251 248 241;
+  --foreground: 15 15 14;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Pattern background — subtle kente-inspired */
+.bg-pattern {
+  background-color: #fbf8f1;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(146, 48, 28, 0.12) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.bg-hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 0%, rgba(212, 85, 42, 0.18), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 10% 100%, rgba(118, 145, 58, 0.18), transparent 60%),
+    linear-gradient(180deg, #fbf8f1 0%, #f3ebd6 100%);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #b8401f 0%, #d4552a 50%, #bb8540 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Marquee ticker */
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 60s linear infinite;
+}
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Card hover lift */
+.lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -12px rgba(146, 48, 28, 0.25);
+}
