@@ -4,93 +4,102 @@ A unified B2B trade platform purpose-built for the **African Continental Free Tr
 
 > Intra-African trade is stuck at ~16-17%. Asia is 59%, Europe 68%. Sokoni is the open TradeOS stack for the AfCFTA market — and **AfriOrigin** is module one.
 
-## The wedge: AfriOrigin
+## What's here
 
-The product SMEs pay for today:
+### Marketing + product surface (59 routes)
 
-- **AI HS-code classification** from a free-text product description
-- **AfCFTA Rules of Origin** determination with plain-language reasoning
-- **Tariff savings calculator** — MFN vs AfCFTA preferential, exact USD savings
-- **Certificate of Origin PDF** in Annex II Appendix I format, accepted under the 2025 AU Digital Trade Protocol
-- **Five languages**: English, French, Portuguese, Arabic, Swahili
-- **Developer API** to embed compliance into ERPs, freight, and e-commerce
-- **Pricing**: Free / $49 Pro SME / $149 SME Bulk / $299 Forwarder / API from $0.10/call
+- `/` — landing with AfriOrigin hero, 3-step explainer, live commodity teaser, TradeOS vision
+- **`/afriorigin`** — interactive 3-step compliance wizard (classify → origin determination → savings + CoO)
+- `/afriorigin/certificate` — print-ready AfCFTA Certificate of Origin (Annex II Appendix I)
+- `/pricing` — 4 tiers + Stripe checkout (live when configured)
+- `/developers` — REST API overview, sample curl, TradeOS diagram
+- **`/docs`** — 13-page documentation site (Concepts, AfriOrigin, API)
+- `/commodities` — live interactive Africa map (Natural Earth polygons + d3-geo)
+- `/afcfta` — standalone tariff calculator + Rules of Origin reference
+- `/marketplace`, `/suppliers`, `/logistics` — roadmap previews
+- `/about`, `/contact`, `/security`, `/terms`, `/privacy` — full legal + trust pages
+- `/status`, `/changelog` — operational transparency
+- `/signin`, `/signup` — auth (waitlist by default, real Auth.js when configured)
+- `/[locale]` — translated hero pages (FR/PT/AR/SW)
 
-## Surface map
+### Integrations (graceful degradation)
 
-| Path | What it is |
-| --- | --- |
-| `/` | Landing — AfriOrigin hero, 3-step explainer, pain points, TradeOS vision |
-| **`/afriorigin`** | **3-step compliance wizard** (classify → origin determination → savings + CoO) |
-| `/afriorigin/certificate` | Printable AfCFTA Certificate of Origin |
-| `/pricing` | 4 SaaS tiers + API pricing |
-| `/developers` | REST API docs, webhooks, TradeOS architecture diagram |
-| `/afcfta` | Standalone tariff calculator + Rules of Origin reference |
-| `/[locale]` | Localized landing (`/fr`, `/pt`, `/ar`, `/sw`) |
-| `/marketplace`, `/[id]` | **Roadmap preview** — listings filtered by AfCFTA category |
-| `/suppliers` | **Roadmap preview** — KYB-tiered supplier directory |
-| `/commodities` | **Roadmap preview** — pan-African commodity benchmarks |
-| `/logistics` | **Roadmap preview** — corridor-aware forwarders & customs brokers |
-| `/dashboard` | Buyer dashboard mock with PAPSS savings |
-| `/research` | Findings + primary sources |
+Every integration **works without env vars** in a demo/fallback mode, and "comes alive" the moment you set the relevant key.
 
-## Architecture: TradeOS for Africa
+| Integration | Behaviour without key | Behaviour with key |
+| --- | --- | --- |
+| **Anthropic Claude** (`ANTHROPIC_API_KEY`) | Wizard uses keyword classifier | Real AI HS classification + plain-language RoO reasoning in 5 languages |
+| **Auth.js** (`NEXTAUTH_SECRET`) | `/signin` and `/signup` route to waitlist | Real sessions; demo credentials `demo@sokoni.africa` / `sokoni-demo` |
+| **Postgres + Drizzle** (`DATABASE_URL`) | API routes log to console | Waitlist + determinations + certificates persisted |
+| **Stripe** (`STRIPE_SECRET_KEY`) | Pricing CTAs route to /signup waitlist | Real checkout; subscriptions; `/api/webhooks/stripe` updates plans |
+| **Paystack** (`PAYSTACK_SECRET_KEY`) | Not surfaced | Available via `lib/billing/paystack.ts` |
+| **Flutterwave** (`FLUTTERWAVE_SECRET_KEY`) | Not surfaced | Mobile money + card across 30+ African countries via `lib/billing/flutterwave.ts` |
+| **Resend** (`RESEND_API_KEY`) | No transactional email | Waitlist confirmations, magic-link auth |
+| **Slack webhook** (`WAITLIST_SLACK_WEBHOOK`) | No-op | Waitlist signups posted to your Slack |
 
-```
-Distribution layer  → WhatsApp · Marketplaces (Jumia, Afrimart, Matta) · Direct web/mobile/USSD
-                                          ↓
-TradeOS (open stack) → Identity · Discovery · COMPLIANCE (AfriOrigin) · Payments · Logistics · Finance
-                                          ↓
-Public rails        → PAPSS · PACM · ADAPT · Customs
-```
-
-AfriOrigin is the wedge. Once an SME's identity, shipment history, and buyer relationships are on Sokoni, the rest of the stack runs on the same verified-business graph.
+Copy `.env.example` to `.env.local` and fill in only what you need.
 
 ## Stack
 
 - **Next.js 14.2** App Router (RSC + client islands)
 - **React 18** + **TypeScript** strict
-- **Tailwind CSS v3** with African-inspired palette (terracotta / savanna / sand)
-- **lucide-react** icons, **Inter** + **Fraunces** fonts
-- Zero database — typed mock data in `lib/data/*` so the app deploys to Vercel with no config
+- **Tailwind CSS v3** with African-inspired palette
+- **d3-geo** + **world-atlas** (Natural Earth) for the Africa map
+- **Anthropic SDK** for AI classification
+- **Auth.js v5 (next-auth@beta)** for authentication
+- **Drizzle ORM + postgres-js** for Postgres access
+- **Stripe / Paystack / Flutterwave** for payments
+- **@vercel/analytics** for usage analytics
+- **lucide-react**, **Inter** + **Fraunces** fonts
 
 ## Local dev
 
 ```bash
 npm install
+cp .env.example .env.local   # optional — fill in keys you want to enable
 npm run dev
 # open http://localhost:3000
 ```
 
-## Deploy to Vercel
-
-The repo is Vercel-ready with **zero config and no env vars**.
-
-1. Push the branch `claude/african-trade-platform-research-tsrs7` (already done).
-2. In Vercel: **Add New → Project → Import from Git**.
-3. Pick this repo. Framework auto-detects **Next.js**.
-4. Click Deploy. Each push to the branch ships a preview URL.
-
-Or via CLI:
+## Database setup (optional)
 
 ```bash
-npm i -g vercel
+# Set DATABASE_URL in .env.local (Vercel Postgres / Neon / Supabase / Railway)
+npx drizzle-kit generate    # create migration files in lib/db/migrations
+npx drizzle-kit push        # apply schema to DB (dev only)
+# Production: use drizzle-kit migrate or run SQL manually
+```
+
+Schema: `lib/db/schema.ts` defines tables for users, sessions, workspaces, waitlist, determinations, certificates, API keys, and API usage.
+
+## Deploy to Vercel
+
+The repo is Vercel-ready. **All env vars are optional** — deploy without any of them and the marketing site + waitlist + map all work.
+
+1. **Add New → Project → Import from Git** on Vercel
+2. Pick the repo. Framework auto-detects Next.js.
+3. (Optional) Add env vars from `.env.example` for the integrations you want live.
+4. Deploy.
+
+`prebuild` regenerates `lib/data/africa-geo.json` from world-atlas on every deploy so the Natural Earth geometry stays in sync.
+
+## CLI
+
+```bash
 vercel        # preview deploy
 vercel --prod # production deploy
 ```
 
-## What v2 wires in
+## What ships next (post-v1)
 
-- **Anthropic Claude API** for production-grade HS classification + plain-language RoO reasoning across 5 languages
-- **KYB pipeline** via Smile ID / Stripe Identity against national company registries
-- **PAPSS API** for live FX quotes and settlement initiation
-- **Customs API integration** (ASYCUDA, used in 40+ African states)
+- **Real-time PAPSS API** when it opens (announced Q3 2026)
+- **OAuth 2.0** for third-party app access
+- **Customs filing integrations** with ASYCUDA-based national authorities
 - **Live commodity feeds** — Refinitiv, S&P Platts, ECX, GCX, JSE
-- **Postgres + Drizzle ORM** for tenants, determinations, certificates, audit trail
-- **Paystack / Flutterwave / Stripe** payments for the SaaS tiers
-- **Real PDF generation** with WeasyPrint, embedded QR for certificate verification
-- **next-intl** for full translation across all routes (scaffolding ready in `lib/i18n/locales.ts`)
+- **Tokenized trade finance** module (TradeOS layer)
+
+See `/changelog` for what landed when and `/docs` for the working manual.
 
 ## License
 
-Source-available under a permissive license to be finalized. Trade data and tariff schedules are derived from publicly published AfCFTA national schedules and WCO HS 2022.
+Source-available under a permissive license to be finalized. Trade data is derived from publicly published AfCFTA national schedules and WCO HS 2022.

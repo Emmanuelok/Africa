@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { CookieBanner } from "@/components/CookieBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -104,6 +105,7 @@ export default function RootLayout({
         <Header />
         <main id="main" className="flex-1">{children}</main>
         <Footer />
+        <CookieBanner />
         <Analytics />
         <script
           type="application/ld+json"

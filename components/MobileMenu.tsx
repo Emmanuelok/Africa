@@ -13,6 +13,7 @@ const PRIMARY = [
 
 const SECONDARY = [
   { href: "/commodities", label: "Live Africa Map" },
+  { href: "/docs", label: "Documentation" },
   { href: "/marketplace", label: "Marketplace" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/afcfta", label: "AfCFTA Reference" },

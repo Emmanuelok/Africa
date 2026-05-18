@@ -25,6 +25,7 @@ export function Footer() {
             <li><Link href="/afriorigin" className="hover:text-white">AfriOrigin</Link></li>
             <li><Link href="/pricing" className="hover:text-white">Pricing</Link></li>
             <li><Link href="/developers" className="hover:text-white">Developer API</Link></li>
+            <li><Link href="/docs" className="hover:text-white">Documentation</Link></li>
             <li><Link href="/commodities" className="hover:text-white">Live Africa Map</Link></li>
             <li><Link href="/changelog" className="hover:text-white">Changelog</Link></li>
             <li><Link href="/status" className="hover:text-white">Status</Link></li>

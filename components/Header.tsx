@@ -13,7 +13,7 @@ const PRIMARY = [
 
 const SECONDARY = [
   { href: "/commodities", label: "Live Map" },
-  { href: "/marketplace", label: "Marketplace" },
+  { href: "/docs", label: "Docs" },
   { href: "/afcfta", label: "AfCFTA" },
   { href: "/research", label: "Research" }
 ];

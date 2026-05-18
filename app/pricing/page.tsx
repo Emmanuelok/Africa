@@ -3,6 +3,7 @@ import { Check, Sparkles, Building2, Briefcase, Code2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { PlanButton } from "@/components/PlanButton";
 
 export const metadata = { title: "Pricing — Sokoni AfriOrigin" };
 
@@ -12,7 +13,7 @@ type Plan = {
   cadence: string;
   description: string;
   cta: string;
-  href: string;
+  planId: "free" | "pro" | "bulk" | "forwarder";
   highlight?: boolean;
   icon: React.ElementType;
   features: string[];
@@ -26,7 +27,7 @@ const PLANS: Plan[] = [
     cadence: "/forever",
     description: "Try AfriOrigin on one shipment a month.",
     cta: "Start free",
-    href: "/afriorigin",
+    planId: "free",
     icon: Sparkles,
     features: [
       "1 origin determination / month",
@@ -42,7 +43,7 @@ const PLANS: Plan[] = [
     cadence: "/month",
     description: "For one exporter shipping under AfCFTA regularly.",
     cta: "Start Pro",
-    href: "/afriorigin",
+    planId: "pro",
     highlight: true,
     icon: Briefcase,
     features: [
@@ -59,7 +60,7 @@ const PLANS: Plan[] = [
     cadence: "/month",
     description: "For growing exporters or co-operatives running many SKUs.",
     cta: "Start Bulk",
-    href: "/afriorigin",
+    planId: "bulk",
     icon: Building2,
     features: [
       "Everything in Pro SME",
@@ -75,7 +76,7 @@ const PLANS: Plan[] = [
     cadence: "/month + $5/cert",
     description: "Multi-tenant for freight forwarders & customs brokers.",
     cta: "Talk to sales",
-    href: "/afriorigin",
+    planId: "forwarder",
     icon: Briefcase,
     meta: "$5 per additional certificate",
     features: [
@@ -137,13 +138,13 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                <Button
-                  href={p.href}
-                  variant={p.highlight ? "primary" : "outline"}
-                  className="mt-6 w-full"
-                >
-                  {p.cta}
-                </Button>
+                <div className="mt-6">
+                  <PlanButton
+                    plan={p.planId}
+                    label={p.cta}
+                    variant={p.highlight ? "primary" : "outline"}
+                  />
+                </div>
               </Card>
             );
           })}

@@ -69,13 +69,31 @@ const INITIAL: WizardState = {
 export function AfriOriginWizard() {
   const [step, setStep] = useState(1);
   const [state, setState] = useState<WizardState>(INITIAL);
+  const [classifying, setClassifying] = useState(false);
 
   function update<K extends keyof WizardState>(k: K, v: WizardState[K]) {
     setState((s) => ({ ...s, [k]: v }));
   }
 
-  function runClassify() {
+  async function runClassify() {
     if (!state.description.trim()) return;
+    setClassifying(true);
+    try {
+      const res = await fetch("/api/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: state.description })
+      });
+      if (res.ok) {
+        const remote = await res.json();
+        update("classification", remote);
+        return;
+      }
+    } catch {
+      // network error — fall through to local
+    } finally {
+      setClassifying(false);
+    }
     const result = classifyProduct(state.description);
     update("classification", result);
   }
@@ -113,6 +131,7 @@ export function AfriOriginWizard() {
           <StepOne
             state={state}
             update={update}
+            classifying={classifying}
             onClassify={runClassify}
             onNext={() => setStep(2)}
           />
@@ -190,11 +209,13 @@ function Stepper({ step }: { step: number }) {
 function StepOne({
   state,
   update,
+  classifying,
   onClassify,
   onNext
 }: {
   state: WizardState;
   update: <K extends keyof WizardState>(k: K, v: WizardState[K]) => void;
+  classifying: boolean;
   onClassify: () => void;
   onNext: () => void;
 }) {
@@ -242,8 +263,8 @@ function StepOne({
           </Field>
         </div>
 
-        <Button onClick={onClassify} disabled={!state.description.trim()}>
-          <Wand2 className="h-4 w-4" /> Classify with AI
+        <Button onClick={onClassify} disabled={!state.description.trim() || classifying}>
+          <Wand2 className="h-4 w-4" /> {classifying ? "Classifying…" : "Classify with AI"}
         </Button>
       </div>
 

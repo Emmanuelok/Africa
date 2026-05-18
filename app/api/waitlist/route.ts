@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
+import { getDb, schema } from "@/lib/db/client";
 
-// Demo handler. Production wires to Resend (email confirmation),
-// Vercel KV or Postgres (storage), and a Slack webhook for ops alerts.
-// Set RESEND_API_KEY, WAITLIST_KV_URL, WAITLIST_SLACK_WEBHOOK as env vars.
+export const runtime = "nodejs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -10,20 +9,40 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const email = String(body?.email ?? "").trim().toLowerCase();
-    const company = String(body?.company ?? "").trim().slice(0, 120);
-    const country = String(body?.country ?? "").trim().slice(0, 80);
+    const company = String(body?.company ?? "").trim().slice(0, 120) || null;
+    const country = String(body?.country ?? "").trim().slice(0, 80) || null;
     const source = String(body?.source ?? "unknown").slice(0, 60);
 
     if (!email || !EMAIL_RE.test(email)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 
-    // In production: persist + email confirmation here.
-    // await kv.lpush("sokoni:waitlist", JSON.stringify({ email, company, country, source, ts: Date.now() }));
-    // await resend.emails.send({ to: email, ... });
+    // Persist if we have a DB.
+    const db = getDb();
+    if (db) {
+      try {
+        await db.insert(schema.waitlist).values({ email, company, country, source }).onConflictDoNothing();
+      } catch (err) {
+        console.error("[waitlist] db insert failed:", err);
+      }
+    }
 
-    // Server-side log so it shows up in Vercel logs while we're still pre-DB.
-    console.log("[waitlist]", { email, company, country, source });
+    // Always log so it shows up in Vercel logs.
+    console.log("[waitlist]", { email, company, country, source, persisted: !!db });
+
+    // Slack notification (optional).
+    const slack = process.env.WAITLIST_SLACK_WEBHOOK;
+    if (slack) {
+      try {
+        await fetch(slack, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: `:wave: New waitlist signup: *${email}* (${company ?? "no company"}, ${country ?? "no country"}) via ${source}`
+          })
+        });
+      } catch {}
+    }
 
     return NextResponse.json({
       ok: true,

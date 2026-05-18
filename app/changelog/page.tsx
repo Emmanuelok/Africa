@@ -13,6 +13,39 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.7.0",
+    type: "feature",
+    title: "Production integrations: AI, auth, billing, DB, docs",
+    bullets: [
+      "Anthropic Claude integration for HS classification — falls back to keyword classifier without key",
+      "Auth.js (next-auth v5) scaffold with credentials + JWT sessions",
+      "Postgres + Drizzle ORM schema (users, workspaces, waitlist, determinations, certificates, API keys)",
+      "Stripe billing with /api/checkout and webhook handler; pricing CTAs go live on key set",
+      "Paystack + Flutterwave wrappers for African payment methods (cards, mobile money, bank transfer)",
+      "Resend-ready waitlist API with Slack webhook notifications",
+      "13-page /docs site with concepts, AfriOrigin, and API guides",
+      "Cookie consent banner with localStorage + cookie persistence",
+      "Security headers via middleware (X-Content-Type-Options, Referrer-Policy, Permissions-Policy)"
+    ]
+  },
+  {
+    date: "18 May 2026",
+    version: "0.6.0",
+    type: "feature",
+    title: "Pre-launch hardening — legal, auth stub, SEO, mobile",
+    bullets: [
+      "/terms, /privacy, /security, /contact legal pages",
+      "/about with mission, values, founding team, partner wall",
+      "/status (8 systems, 99.9%+ uptime) and /changelog",
+      "Mobile hamburger menu replacing overflowing desktop nav",
+      "/signup waitlist flow with API + Slack hook stubs",
+      "Programmatic /icon favicon and /opengraph-image OG card",
+      "robots.txt + sitemap.xml + JSON-LD Organization/SoftwareApplication structured data",
+      "Vercel Analytics, global loading.tsx and error.tsx boundaries"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.5.0",
     type: "feature",
     title: "Live African commodity map",
