@@ -30,13 +30,17 @@ export default function MarketplacePage({
       <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <Badge tone="terracotta">Marketplace</Badge>
+            <div className="flex flex-wrap gap-2">
+              <Badge tone="terracotta">Marketplace</Badge>
+              <Badge tone="info">Roadmap preview · Q4 2026</Badge>
+            </div>
             <h1 className="mt-3 font-display text-3xl font-semibold md:text-4xl">
               {filtered.length} listings across Africa
             </h1>
             <p className="mt-2 text-ink-600">
               Raw materials, commodities, and finished goods — every listing carries an AfCFTA
-              preferential-rate preview and KYB-verified supplier.
+              preferential-rate preview and KYB-verified supplier. <em>Marketplace launches after
+              AfriOrigin compliance reaches 1,000 paying SMEs.</em>
             </p>
           </div>
         </div>
