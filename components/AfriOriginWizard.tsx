@@ -121,6 +121,33 @@ export function AfriOriginWizard() {
     return { mfn, afcfta, saved: mfn - afcfta, mfnRate: t.mfnRate, afcftaRate: t.afcftaRate };
   }, [state.classification, state.fobValue]);
 
+  // Persist to the API once we land on step 3 (fire-and-forget; UI doesn't wait).
+  async function saveAndAdvance() {
+    if (!state.classification || !state.originResult || !savings) {
+      setStep(3);
+      return;
+    }
+    void fetch("/api/determinations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        description: state.description,
+        hsCode: state.classification.hsPrefix,
+        confidence: state.classification.confidence,
+        originCountry: state.origin,
+        destinationCountry: state.destination,
+        quantity: state.quantity,
+        fobValueUsd: state.fobValue,
+        qualifies: state.originResult.qualifies,
+        ruleApplied: state.originResult.rule,
+        mfnRate: savings.mfnRate,
+        afcftaRate: savings.afcftaRate,
+        savingsUsd: savings.saved
+      })
+    }).catch(() => {});
+    setStep(3);
+  }
+
   return (
     <div>
       {/* Step progress */}
@@ -142,7 +169,7 @@ export function AfriOriginWizard() {
             update={update}
             onCheck={runOriginCheck}
             onBack={() => setStep(1)}
-            onNext={() => setStep(3)}
+            onNext={saveAndAdvance}
           />
         )}
         {step === 3 && state.classification && state.originResult && savings && (

@@ -1,173 +1,183 @@
 import Link from "next/link";
-import {
-  TrendingUp,
-  PackageCheck,
-  Wallet,
-  AlertTriangle,
-  MessageSquare,
-  ArrowUpRight
-} from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { ArrowUpRight, ShieldCheck, FileCheck2, TrendingUp, Wallet, Wand2, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { getProduct } from "@/lib/data/products";
-import { getSupplier } from "@/lib/data/suppliers";
+import { getSessionUser } from "@/lib/server/session";
+import { listDeterminations, listCertificates } from "@/lib/data/determinations";
 import { getCountry } from "@/lib/data/countries";
-import { formatCurrency } from "@/lib/utils";
 
-export const metadata = { title: "Dashboard — Sokoni" };
+export const metadata = { title: "Overview — Sokoni" };
 
-const ORDERS = [
-  { id: "SK-2026-0418", productId: "p-002", qty: 25000, status: "In transit" as const, eta: "May 28" },
-  { id: "SK-2026-0411", productId: "p-007", qty: 1200, status: "Customs clearance" as const, eta: "May 22" },
-  { id: "SK-2026-0395", productId: "p-001", qty: 1500, status: "Delivered" as const, eta: "Apr 30" },
-  { id: "SK-2026-0388", productId: "p-005", qty: 2000, status: "RFQ open" as const, eta: "—" }
-];
+export default async function DashboardOverview() {
+  const user = await getSessionUser();
+  const [determinations, certificates] = await Promise.all([
+    listDeterminations(user.workspaceId, 5),
+    listCertificates(user.workspaceId, 5)
+  ]);
 
-const RFQS = [
-  { id: "RFQ-7741", productId: "p-006", from: "Lagos, NG", to: "Casablanca, MA", value: 18400 },
-  { id: "RFQ-7732", productId: "p-008", from: "Cairo, EG", to: "Nairobi, KE", value: 412000 },
-  { id: "RFQ-7724", productId: "p-009", from: "Accra, GH", to: "Tunis, TN", value: 25020 }
-];
-
-export default function DashboardPage({
-  searchParams
-}: {
-  searchParams?: { rfq?: string };
-}) {
-  const rfqProduct = searchParams?.rfq ? getProduct(searchParams.rfq) : null;
+  const totalSavings = determinations.reduce((s, d) => s + d.savingsUsd, 0);
+  const totalFob = determinations.reduce((s, d) => s + d.fobValueUsd, 0);
+  const qualifyingPct = determinations.length
+    ? Math.round((determinations.filter((d) => d.qualifies === "yes").length / determinations.length) * 100)
+    : 0;
 
   return (
-    <div className="bg-pattern">
-      <div className="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-14">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <Badge tone="terracotta">Dashboard</Badge>
-            <h1 className="mt-3 font-display text-3xl font-semibold md:text-4xl">
-              Welcome back, Amara
-            </h1>
-            <p className="mt-1 text-ink-600">Trade Operations Lead · Lagos, Nigeria</p>
-          </div>
-          <Button href="/marketplace" size="md">
-            Find new suppliers
-          </Button>
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm text-ink-500">
+            {greet()}, {user.name?.split(" ")[0] ?? "there"}.
+          </p>
+          <h1 className="font-display text-2xl font-semibold md:text-3xl">Workspace overview</h1>
         </div>
+        <Button href="/afriorigin" size="md">
+          <Wand2 className="h-4 w-4" /> New shipment
+        </Button>
+      </header>
 
-        {rfqProduct && (
-          <Card className="mt-8 border-terracotta-200 bg-terracotta-50">
-            <div className="flex items-start gap-3">
-              <MessageSquare className="mt-0.5 h-5 w-5 text-terracotta-700" />
-              <div className="flex-1">
-                <div className="font-semibold text-terracotta-900">
-                  RFQ draft ready for <em>{rfqProduct.name}</em>
+      {/* Metric tiles */}
+      <div className="grid gap-3 md:grid-cols-4">
+        <Metric
+          icon={<ShieldCheck className="h-4 w-4" />}
+          label="Determinations"
+          value={String(determinations.length)}
+          sub="Last 30 days"
+        />
+        <Metric
+          icon={<FileCheck2 className="h-4 w-4" />}
+          label="Certificates issued"
+          value={String(certificates.length)}
+          sub={`${certificates.filter((c) => c.endorsedByAuthority).length} endorsed`}
+        />
+        <Metric
+          icon={<Wallet className="h-4 w-4" />}
+          label="AfCFTA savings"
+          value={formatUsd(totalSavings)}
+          sub={`On ${formatUsd(totalFob)} FOB value`}
+          accent
+        />
+        <Metric
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Qualifying rate"
+          value={`${qualifyingPct}%`}
+          sub="Of shipments meet RoO"
+        />
+      </div>
+
+      {/* Recent determinations */}
+      <Card>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold">Recent determinations</h2>
+          <Link
+            href="/dashboard/determinations"
+            className="text-sm text-terracotta-700 hover:underline"
+          >
+            View all <ArrowRight className="inline h-3 w-3" />
+          </Link>
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wide text-ink-500">
+                <th className="py-2">Product</th>
+                <th className="py-2">HS</th>
+                <th className="py-2">Lane</th>
+                <th className="py-2 text-right">Savings</th>
+                <th className="py-2 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink-100">
+              {determinations.slice(0, 5).map((d) => (
+                <tr key={d.id} className="hover:bg-sand-50/60">
+                  <td className="max-w-[260px] truncate py-3 font-medium">{d.description}</td>
+                  <td className="py-3 font-mono text-xs text-ink-600">{d.hsCode}</td>
+                  <td className="py-3 text-xs text-ink-700">
+                    {flag(d.originCountry)} {getCountry(d.originCountry)?.name ?? d.originCountry}
+                    {" → "}
+                    {flag(d.destinationCountry)} {getCountry(d.destinationCountry)?.name ?? d.destinationCountry}
+                  </td>
+                  <td className="py-3 text-right font-mono font-medium text-savanna-700">
+                    {formatUsd(d.savingsUsd)}
+                  </td>
+                  <td className="py-3 text-right">
+                    <StatusBadge status={d.qualifies} />
+                  </td>
+                </tr>
+              ))}
+              {determinations.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-ink-500">
+                    No determinations yet.{" "}
+                    <Link href="/afriorigin" className="text-terracotta-700 hover:underline">
+                      Run your first one →
+                    </Link>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Two-up: Certificates + Plan usage */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <Card>
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-semibold">Latest certificates</h2>
+            <Link
+              href="/dashboard/certificates"
+              className="text-sm text-terracotta-700 hover:underline"
+            >
+              View all <ArrowRight className="inline h-3 w-3" />
+            </Link>
+          </div>
+          <ul className="mt-4 space-y-3">
+            {certificates.slice(0, 4).map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between rounded-lg border border-ink-100 bg-white p-3 text-sm"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-xs font-medium text-ink-900">
+                    {c.reference}
+                  </div>
+                  <div className="mt-0.5 truncate text-xs text-ink-600">
+                    {c.exporterName} → {c.consigneeName}
+                  </div>
                 </div>
-                <p className="mt-1 text-sm text-terracotta-800">
-                  We pre-filled MOQ ({rfqProduct.moq.toLocaleString()} {rfqProduct.unit}), HS code{" "}
-                  {rfqProduct.hsCode}, and routed it to the supplier in their working language.
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="primary">Send RFQ</Button>
-                  <Button size="sm" variant="outline" href="/dashboard">Discard</Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
+                {c.endorsedByAuthority ? (
+                  <Badge tone="savanna">Endorsed</Badge>
+                ) : (
+                  <Badge tone="warn">Pending</Badge>
+                )}
+              </li>
+            ))}
+            {certificates.length === 0 && (
+              <li className="rounded-lg border border-dashed border-ink-300 p-4 text-center text-sm text-ink-500">
+                No certificates yet.
+              </li>
+            )}
+          </ul>
+        </Card>
 
-        {/* KPIs */}
-        <div className="mt-8 grid gap-5 md:grid-cols-4">
-          <Kpi icon={<PackageCheck className="h-5 w-5" />} label="Active orders" value="14" delta="+3 vs. April" />
-          <Kpi icon={<TrendingUp className="h-5 w-5" />} label="TTM trade volume" value={formatCurrency(2_140_000)} delta="+38% YoY" />
-          <Kpi icon={<Wallet className="h-5 w-5" />} label="PAPSS-settled %" value="62%" delta="USD costs avoided: $44.2k" />
-          <Kpi icon={<AlertTriangle className="h-5 w-5" />} label="Documents pending" value="3" delta="2 CoO · 1 invoice" tone="warn" />
-        </div>
-
-        <div className="mt-10 grid gap-8 lg:grid-cols-3">
-          {/* Orders */}
-          <div className="lg:col-span-2">
-            <h2 className="font-display text-xl font-semibold">Recent orders</h2>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-ink-200 bg-white">
-              <table className="w-full text-sm">
-                <thead className="bg-ink-50 text-left text-xs uppercase tracking-wide text-ink-500">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Order</th>
-                    <th className="px-4 py-3 font-medium">Product</th>
-                    <th className="px-4 py-3 font-medium">Supplier</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">ETA</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ink-100">
-                  {ORDERS.map((o) => {
-                    const p = getProduct(o.productId);
-                    const s = p ? getSupplier(p.supplierId) : null;
-                    return (
-                      <tr key={o.id} className="hover:bg-sand-50/40">
-                        <td className="px-4 py-3 font-mono text-xs">{o.id}</td>
-                        <td className="px-4 py-3">
-                          <Link href={`/marketplace/${p?.id ?? ""}`} className="font-medium hover:text-terracotta-700">
-                            {p?.name}
-                          </Link>
-                          <div className="text-xs text-ink-500">
-                            {o.qty.toLocaleString()} {p?.unit}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-ink-700">{s?.name}</td>
-                        <td className="px-4 py-3">
-                          <StatusPill status={o.status} />
-                        </td>
-                        <td className="px-4 py-3 text-ink-700">{o.eta}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+        <Card>
+          <h2 className="font-display text-lg font-semibold">Plan & usage</h2>
+          <div className="mt-4 space-y-3 text-sm">
+            <UsageRow label="Plan" value={user.plan.toUpperCase()} />
+            <UsageRow label="Determinations" value={`${determinations.length} / ∞`} />
+            <UsageRow
+              label="Certificates this month"
+              value={`${certificates.length} / ${planLimit(user.plan)}`}
+            />
+            <UsageRow label="Languages enabled" value="5" />
           </div>
-
-          {/* Open RFQs */}
-          <div>
-            <h2 className="font-display text-xl font-semibold">Open RFQs received</h2>
-            <div className="mt-4 space-y-3">
-              {RFQS.map((r) => {
-                const p = getProduct(r.productId);
-                return (
-                  <Card key={r.id} className="lift">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-xs font-mono text-ink-500">{r.id}</div>
-                        <div className="font-medium">{p?.name}</div>
-                        <div className="mt-1 text-xs text-ink-600">{r.from} → {r.to}</div>
-                      </div>
-                      <ArrowUpRight className="h-4 w-4 text-ink-400" />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-ink-500">Estimated value</span>
-                      <span className="font-semibold">{formatCurrency(r.value)}</span>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* PAPSS callout */}
-        <Card className="mt-10 bg-gradient-to-br from-savanna-700 to-savanna-900 text-white">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <Badge tone="sand" className="border-savanna-200 bg-savanna-100 text-savanna-900">
-                PAPSS integration
-              </Badge>
-              <h3 className="mt-3 font-display text-xl font-semibold">
-                You&apos;ve avoided $44,200 in FX & correspondent-bank fees this year.
-              </h3>
-              <p className="mt-1 text-sm text-savanna-100">
-                Across 18 PAPSS-routed settlements between NGN and KES, ZMW, EGP, GHS.
-              </p>
-            </div>
-            <Button variant="secondary" className="bg-white text-ink-900 hover:bg-ink-100">
-              View settlement history
+          <div className="mt-5 flex gap-2">
+            <Button href="/dashboard/billing" variant="outline" size="sm">
+              Manage billing
+            </Button>
+            <Button href="/pricing" variant="ghost" size="sm">
+              Compare plans <ArrowUpRight className="h-3.5 w-3.5" />
             </Button>
           </div>
         </Card>
@@ -176,45 +186,62 @@ export default function DashboardPage({
   );
 }
 
-function Kpi({
+function Metric({
   icon,
   label,
   value,
-  delta,
-  tone = "neutral"
+  sub,
+  accent
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  delta: string;
-  tone?: "neutral" | "warn";
+  sub: string;
+  accent?: boolean;
 }) {
   return (
-    <Card>
-      <div
-        className={`grid h-10 w-10 place-items-center rounded-lg ${
-          tone === "warn" ? "bg-amber-50 text-amber-700" : "bg-terracotta-50 text-terracotta-700"
-        }`}
-      >
-        {icon}
+    <Card className={accent ? "border-savanna-300 bg-savanna-50/40" : ""}>
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-ink-500">
+        {icon} {label}
       </div>
-      <div className="mt-4 text-xs uppercase tracking-wide text-ink-500">{label}</div>
-      <div className="mt-1 font-display text-3xl font-semibold">{value}</div>
-      <div className="mt-1 text-xs text-ink-600">{delta}</div>
+      <div className="mt-2 font-display text-2xl font-semibold">{value}</div>
+      <div className="mt-1 text-xs text-ink-600">{sub}</div>
     </Card>
   );
 }
 
-function StatusPill({ status }: { status: "In transit" | "Customs clearance" | "Delivered" | "RFQ open" }) {
-  const map = {
-    "In transit": "bg-blue-50 text-blue-700 border-blue-200",
-    "Customs clearance": "bg-amber-50 text-amber-700 border-amber-200",
-    Delivered: "bg-green-50 text-green-700 border-green-200",
-    "RFQ open": "bg-terracotta-50 text-terracotta-700 border-terracotta-200"
-  } as const;
+function UsageRow({ label, value }: { label: string; value: string }) {
   return (
-    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${map[status]}`}>
-      {status}
-    </span>
+    <div className="flex justify-between">
+      <span className="text-ink-600">{label}</span>
+      <span className="font-mono font-medium">{value}</span>
+    </div>
   );
+}
+
+function StatusBadge({ status }: { status: "yes" | "no" | "marginal" }) {
+  if (status === "yes") return <Badge tone="savanna">Qualifies</Badge>;
+  if (status === "marginal") return <Badge tone="warn">Marginal</Badge>;
+  return <Badge tone="terracotta">No</Badge>;
+}
+
+function flag(iso2: string): string {
+  if (!iso2 || iso2.length !== 2) return "";
+  const A = 0x1f1e6;
+  return String.fromCodePoint(A + iso2.charCodeAt(0) - 65, A + iso2.charCodeAt(1) - 65);
+}
+
+function formatUsd(n: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
+function greet(): string {
+  const h = new Date().getUTCHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function planLimit(plan: string): string {
+  return plan === "forwarder" ? "∞" : plan === "bulk" ? "25" : plan === "pro" ? "5" : "0";
 }
