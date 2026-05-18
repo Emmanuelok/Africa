@@ -13,6 +13,23 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.8.0",
+    type: "feature",
+    title: "Launch-blocker batch: email, real auth, rate limits, captcha, Sentry, cron",
+    bullets: [
+      "Resend wired end-to-end: waitlist confirmations + magic-link auth + certificate-issued emails",
+      "Auth.js v5 Drizzle adapter — real sessions persist to Postgres when DATABASE_URL is set",
+      "Password hashing with bcryptjs (12 rounds) + safe constant-time demo path",
+      "/api/auth/register endpoint with email + bcrypt + captcha + rate-limit",
+      "Upstash Ratelimit on /api/classify (20/min), /api/checkout (5/min), /api/waitlist + /api/auth/register (3/10min)",
+      "Cloudflare Turnstile invisible CAPTCHA on every public form, server-verified",
+      "Sentry @sentry/nextjs wired across client/server/edge with tunnelRoute for ad-blocker resilience",
+      "Vercel Cron at /api/cron/cleanup — daily session and verification-token pruning",
+      "DEPLOY.md — full Vercel + Neon walkthrough with every env var documented"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.7.0",
     type: "feature",
     title: "Production integrations: AI, auth, billing, DB, docs",

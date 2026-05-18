@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   name: text("name"),
   image: text("image"),
   emailVerified: timestamp("email_verified"),
+  passwordHash: text("password_hash"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });

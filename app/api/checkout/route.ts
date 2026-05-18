@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStripe, PRICE_IDS } from "@/lib/billing/stripe";
+import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
@@ -10,6 +11,13 @@ const PLAN_TO_PRICE = {
 } as const;
 
 export async function POST(req: Request) {
+  const ip = clientIdentifier(req);
+  const rl = await rateLimit(ip, "checkout");
+  const headers = rateLimitResponseHeaders(rl);
+  if (!rl.success) {
+    return NextResponse.json({ error: "Too many checkout attempts. Slow down." }, { status: 429, headers });
+  }
+
   try {
     const body = await req.json();
     const plan = String(body?.plan ?? "") as keyof typeof PLAN_TO_PRICE;
@@ -19,13 +27,13 @@ export async function POST(req: Request) {
     if (!stripe) {
       return NextResponse.json(
         { error: "Billing not yet enabled. Join the waitlist at /signup to be notified.", redirect: "/signup" },
-        { status: 503 }
+        { status: 503, headers }
       );
     }
 
     const price = PLAN_TO_PRICE[plan];
     if (!price) {
-      return NextResponse.json({ error: "Unknown plan" }, { status: 400 });
+      return NextResponse.json({ error: "Unknown plan" }, { status: 400, headers });
     }
 
     const origin = new URL(req.url).origin;
@@ -40,9 +48,9 @@ export async function POST(req: Request) {
       metadata: { plan }
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url }, { headers });
   } catch (err) {
     console.error("[/api/checkout]", err);
-    return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
+    return NextResponse.json({ error: "Checkout failed" }, { status: 500, headers });
   }
 }

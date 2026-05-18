@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { ArrowRight, Check, AlertCircle, Loader2 } from "lucide-react";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -15,6 +16,7 @@ export function WaitlistForm({
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
   const [country, setCountry] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
 
@@ -26,7 +28,7 @@ export function WaitlistForm({
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, company, country, source })
+        body: JSON.stringify({ email, company, country, source, captchaToken })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Something went wrong");
@@ -100,6 +102,7 @@ export function WaitlistForm({
           className={`mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta-500/20 ${inputClass}`}
         />
       </label>
+      <TurnstileWidget onToken={setCaptchaToken} theme={dark ? "dark" : "light"} />
       <button
         type="submit"
         disabled={status === "loading"}
