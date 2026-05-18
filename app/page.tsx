@@ -94,6 +94,62 @@ export default function HomePage() {
 
       <CommodityTicker />
 
+      {/* LIVE AFRICA MAP TEASER */}
+      <section className="bg-ink-950 text-white">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:px-6">
+          <div>
+            <Badge tone="terracotta" className="bg-terracotta-900/30 text-terracotta-200">
+              <span className="relative inline-flex h-2 w-2 mr-1">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-terracotta-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-terracotta-400" />
+              </span>
+              Live now
+            </Badge>
+            <h2 className="mt-4 font-display text-3xl font-semibold md:text-4xl">
+              Every African commodity. Every African producer.{" "}
+              <span className="text-terracotta-300">One map.</span>
+            </h2>
+            <p className="mt-4 text-ink-200">
+              Click any country to see what it exports and at what price. Pick a commodity to see
+              the top African producers light up. Prices stream every 3.5 seconds. Geometry is
+              Natural Earth (public domain) — no API key, no rate limit.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button href="/commodities" size="lg">
+                Open the live map <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="mt-6 grid grid-cols-3 gap-3 text-sm">
+              <MiniMetric label="Countries" value="54" />
+              <MiniMetric label="Commodities" value="12+" />
+              <MiniMetric label="Update cadence" value="3.5s" />
+            </div>
+          </div>
+
+          {/* Decorative mini map preview */}
+          <div className="relative">
+            <div className="overflow-hidden rounded-3xl border border-ink-800 bg-gradient-to-br from-ink-900 to-ink-950 p-6 shadow-2xl">
+              <div className="flex items-center justify-between text-xs text-ink-400">
+                <span>AFRICA · LIVE PRICES</span>
+                <span className="font-mono">{new Date().getUTCFullYear()}</span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <PreviewRow label="🇨🇮 Cocoa Beans" price="$8,420" up />
+                <PreviewRow label="🇿🇲 Copper" price="$9,685" up />
+                <PreviewRow label="🇰🇪 Coffee A" price="$7,180" />
+                <PreviewRow label="🇿🇦 Gold" price="$2,980" up />
+                <PreviewRow label="🇨🇩 Cobalt" price="$33.5k" up />
+                <PreviewRow label="🇲🇬 Vanilla" price="$96/kg" />
+              </div>
+              <div className="mt-6 text-[10px] text-ink-500">
+                Click a country on the live map to drill in.
+              </div>
+            </div>
+            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-terracotta-500/10 blur-3xl" />
+          </div>
+        </div>
+      </section>
+
       {/* HOW IT WORKS */}
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-20 md:px-6">
@@ -250,6 +306,26 @@ export default function HomePage() {
         </div>
       </section>
     </>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-ink-800 bg-ink-900/50 p-3">
+      <div className="text-[10px] uppercase tracking-wider text-ink-400">{label}</div>
+      <div className="mt-1 font-display text-2xl font-semibold text-white">{value}</div>
+    </div>
+  );
+}
+
+function PreviewRow({ label, price, up }: { label: string; price: string; up?: boolean }) {
+  return (
+    <div className="flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2">
+      <span className="text-ink-200">{label}</span>
+      <span className={`font-mono ${up ? "text-savanna-300" : "text-terracotta-300"}`}>
+        {price} {up ? "▲" : "▼"}
+      </span>
+    </div>
   );
 }
 
