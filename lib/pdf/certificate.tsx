@@ -1,5 +1,17 @@
-import { Document, Page, View, Text, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import QRCode from "qrcode";
 import { getCountry } from "@/lib/data/countries";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sokoni.africa";
+
+async function qrDataUrl(reference: string): Promise<string> {
+  return QRCode.toDataURL(`${SITE_URL}/verify/${reference}`, {
+    errorCorrectionLevel: "M",
+    margin: 1,
+    width: 220,
+    color: { dark: "#0f0f0e", light: "#ffffff" }
+  });
+}
 
 // AfCFTA Certificate of Origin — Annex II Appendix I format.
 // Server-only. Returns a PDF Buffer suitable for streaming or storage.
@@ -150,7 +162,7 @@ function countryName(iso: string): string {
   return getCountry(iso)?.name ?? iso;
 }
 
-export function CertificatePDF({ data }: { data: CertificateData }) {
+export function CertificatePDF({ data, qrCode }: { data: CertificateData; qrCode?: string }) {
   const issueDate = new Date(data.issuedAt).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
@@ -176,6 +188,14 @@ export function CertificatePDF({ data }: { data: CertificateData }) {
           <View style={styles.refBox}>
             <Text style={styles.ref}>{data.reference}</Text>
             <Text style={styles.issued}>Issued {issueDate}</Text>
+            {qrCode && (
+              <View style={{ marginTop: 6, alignItems: "flex-end" }}>
+                <Image src={qrCode} style={{ width: 56, height: 56 }} />
+                <Text style={{ fontSize: 6, color: colors.inkSubtle, marginTop: 2 }}>
+                  Verify at sokoni.africa/verify
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -316,5 +336,6 @@ export function CertificatePDF({ data }: { data: CertificateData }) {
 }
 
 export async function renderCertificatePdf(data: CertificateData): Promise<Buffer> {
-  return await renderToBuffer(<CertificatePDF data={data} />);
+  const qrCode = await qrDataUrl(data.reference);
+  return await renderToBuffer(<CertificatePDF data={data} qrCode={qrCode} />);
 }

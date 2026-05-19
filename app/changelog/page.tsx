@@ -13,6 +13,21 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.12.0",
+    type: "feature",
+    title: "Public cert verification + QR codes, Vercel Blob, KYB, team invites",
+    bullets: [
+      "Certificate PDFs now embed a QR code that resolves to /verify/[reference] — a no-auth public verification page customs officers can scan",
+      "/verify/[reference] shows authenticated/endorsed status, full trade lane, product details, exporter/consignee, with a 'For customs officers' note",
+      "Vercel Blob storage for certificate PDFs: rendered once on issuance, future downloads 302 to the CDN URL",
+      "Smile Identity KYB scaffold — business verification across NG/KE/GH/ZA/UG/TZ/RW/CI with callback handler",
+      "kyb_* columns on workspaces, /dashboard/verification page with form + status tracking",
+      "Real team invitations: 7-day tokens, Resend email with accept link, /accept-invite page, /api/team/invitations CRUD",
+      "Dashboard team page shows pending invitations alongside members"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.11.0",
     type: "feature",
     title: "Webhooks, audit log, real account registration",

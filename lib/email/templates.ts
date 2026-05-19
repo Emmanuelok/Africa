@@ -68,6 +68,32 @@ export function magicLinkEmail({ url, host }: { url: string; host: string }) {
   };
 }
 
+export function teamInviteEmail({
+  inviterName,
+  workspaceName,
+  acceptUrl
+}: {
+  inviterName: string;
+  workspaceName: string;
+  acceptUrl: string;
+}) {
+  const body = `
+    <h1 style="font-size:22px;color:#0f0f0e;margin:0 0 12px;">You're invited to ${workspaceName}</h1>
+    <p><strong>${inviterName}</strong> invited you to join the <strong>${workspaceName}</strong> workspace on Sokoni.</p>
+    <p>Sokoni is the open trade platform for the African Continental Free Trade Area — AfCFTA compliance, Certificates of Origin, and tariff savings in one place.</p>
+    <p style="margin:24px 0;">
+      <a href="${acceptUrl}" style="display:inline-block;background:#b8401f;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:500;">Accept invitation</a>
+    </p>
+    <p style="font-size:13px;color:#85857d;word-break:break-all;">Or open this link: <br>${acceptUrl}</p>
+    <p style="font-size:13px;color:#85857d;margin-top:24px;">This invitation expires in 7 days. If you weren't expecting it, ignore this email.</p>
+  `;
+  return {
+    subject: `${inviterName} invited you to ${workspaceName} on Sokoni`,
+    html: shell("You're invited", body),
+    text: `${inviterName} invited you to join ${workspaceName} on Sokoni. Accept at: ${acceptUrl} (expires in 7 days)`
+  };
+}
+
 export function certificateIssuedEmail({
   reference,
   hsCode,

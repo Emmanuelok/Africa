@@ -74,6 +74,14 @@ export const workspaces = pgTable("workspaces", {
   plan: text("plan").default("free").notNull(), // free | pro | bulk | forwarder
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  // KYB
+  kybStatus: text("kyb_status").default("not_started").notNull(), // not_started | pending | verified | rejected
+  kybProvider: text("kyb_provider"), // "smile" for Smile Identity
+  kybJobId: text("kyb_job_id"),
+  kybBusinessType: text("kyb_business_type"),
+  kybRegistrationNumber: text("kyb_registration_number"),
+  kybVerifiedAt: timestamp("kyb_verified_at"),
+  kybRejectionReason: text("kyb_rejection_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
@@ -93,6 +101,21 @@ export const workspaceMembers = pgTable(
     pk: primaryKey({ columns: [t.workspaceId, t.userId] })
   })
 );
+
+export const workspaceInvitations = pgTable("workspace_invitations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .notNull(),
+  email: text("email").notNull(),
+  role: text("role").default("member").notNull(),
+  invitedById: uuid("invited_by_id").references(() => users.id, { onDelete: "set null" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
 
 // =============================================================================
 // waitlist

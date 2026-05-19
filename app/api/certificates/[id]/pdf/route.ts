@@ -7,6 +7,14 @@ export const runtime = "nodejs";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const id = params.id;
+
+  // If we have a stored Blob URL, just redirect — saves a re-render and uses
+  // Vercel's CDN edge cache.
+  const blobUrl = await lookupBlobUrl(id);
+  if (blobUrl) {
+    return Response.redirect(blobUrl, 302);
+  }
+
   const data = await resolveCertificate(id);
   if (!data) {
     return new Response("Certificate not found", { status: 404 });
@@ -23,6 +31,18 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       "Cache-Control": "private, no-store"
     }
   });
+}
+
+async function lookupBlobUrl(id: string): Promise<string | null> {
+  if (id.startsWith("cert_demo_") || id.startsWith("AFCFTA-")) return null;
+  const db = getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ pdfUrl: schema.certificates.pdfUrl })
+    .from(schema.certificates)
+    .where(eq(schema.certificates.id, id))
+    .limit(1);
+  return rows[0]?.pdfUrl ?? null;
 }
 
 async function resolveCertificate(id: string): Promise<CertificateData | null> {

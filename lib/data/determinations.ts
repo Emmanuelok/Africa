@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { getDb, schema } from "@/lib/db/client";
+import { putCertificatePdf } from "@/lib/blob/store";
 import {
   DEMO_DETERMINATIONS,
   DEMO_CERTIFICATES,
@@ -104,11 +105,11 @@ export type SaveCertificateInput = {
   consigneeAddress?: string;
 };
 
-export async function saveCertificate(input: SaveCertificateInput): Promise<{ id: string; reference: string }> {
+export async function saveCertificate(input: SaveCertificateInput): Promise<{ id: string; reference: string; pdfUrl: string | null }> {
   const reference = generateCertReference();
   const db = getDb();
   if (!db || input.workspaceId === "demo-workspace") {
-    return { id: `cert_demo_${randomBytes(4).toString("hex")}`, reference };
+    return { id: `cert_demo_${randomBytes(4).toString("hex")}`, reference, pdfUrl: null };
   }
   const rows = await db
     .insert(schema.certificates)
@@ -119,10 +120,54 @@ export async function saveCertificate(input: SaveCertificateInput): Promise<{ id
       exporterName: input.exporterName,
       exporterAddress: input.exporterAddress,
       consigneeName: input.consigneeName,
-      consigneeAddress: input.consigneeAddress
+      consigneeAddress: input.consigneeAddress,
+      qrVerificationUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sokoni.africa"}/verify/${reference}`
     })
     .returning({ id: schema.certificates.id, reference: schema.certificates.reference });
-  return { id: rows[0].id, reference: rows[0].reference };
+
+  // Render + persist the PDF to Vercel Blob in the background. Failure is
+  // non-fatal — the on-demand /api/certificates/[id]/pdf route always works.
+  void (async () => {
+    try {
+      const { renderCertificatePdf } = await import("@/lib/pdf/certificate");
+      const det = input.determinationId.startsWith("det_demo_")
+        ? null
+        : (await db
+            .select()
+            .from(schema.determinations)
+            .where(eq(schema.determinations.id, input.determinationId))
+            .limit(1))[0];
+
+      const pdfBuf = await renderCertificatePdf({
+        reference,
+        issuedAt: new Date().toISOString(),
+        hsCode: det?.hsCode ?? input.hsCode,
+        productDescription: det?.description ?? "—",
+        originCountry: input.originCountry,
+        destinationCountry: input.destinationCountry,
+        exporter: { name: input.exporterName, address: input.exporterAddress },
+        consignee: { name: input.consigneeName, address: input.consigneeAddress },
+        shipment: {
+          quantity: det?.quantity ? Number(det.quantity) : undefined,
+          fobValueUsd: det?.fobValueUsd ? Number(det.fobValueUsd) : undefined,
+          unit: "kg"
+        },
+        originCriterion: det?.ruleApplied ?? "Wholly Obtained",
+        preferentialRate: det?.afcftaRate ? Number(det.afcftaRate) : undefined
+      });
+      const pdfUrl = await putCertificatePdf(reference, pdfBuf);
+      if (pdfUrl) {
+        await db
+          .update(schema.certificates)
+          .set({ pdfUrl })
+          .where(eq(schema.certificates.id, rows[0].id));
+      }
+    } catch (err) {
+      console.warn("[certificates] background PDF render failed:", err);
+    }
+  })();
+
+  return { id: rows[0].id, reference: rows[0].reference, pdfUrl: null };
 }
 
 export async function listCertificates(workspaceId: string, limit = 50): Promise<DemoCertificate[]> {
