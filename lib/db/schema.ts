@@ -280,3 +280,28 @@ export const auditLog = pgTable(
     actionIdx: index("audit_action_idx").on(t.action)
   })
 );
+
+// =============================================================================
+// Notifications (in-product)
+// =============================================================================
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .references(() => workspaces.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // certificate.issued | determination.marginal | billing.* | system.*
+    title: text("title").notNull(),
+    body: text("body"),
+    target: text("target"), // resource id or path to deep-link
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    wsIdx: index("notif_workspace_idx").on(t.workspaceId),
+    userIdx: index("notif_user_idx").on(t.userId),
+    createdIdx: index("notif_created_idx").on(t.createdAt)
+  })
+);

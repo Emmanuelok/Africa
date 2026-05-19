@@ -6,6 +6,7 @@ import { certificateIssuedEmail } from "@/lib/email/templates";
 import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/ratelimit";
 import { dispatch } from "@/lib/webhooks/dispatch";
 import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
+import { notify } from "@/lib/server/notify";
 
 export const runtime = "nodejs";
 
@@ -72,6 +73,15 @@ export async function POST(req: Request) {
         destination_country: String(body.destinationCountry),
         pdf_url: `/api/certificates/${result.id}/pdf`
       }
+    });
+
+    notify({
+      workspaceId: user.workspaceId,
+      userId: user.id,
+      kind: "certificate.issued",
+      title: `Certificate ${result.reference} issued`,
+      body: `${String(body.exporterName ?? "")} → ${String(body.consigneeName ?? "")} · HS ${body.hsCode}`,
+      target: "/dashboard/certificates"
     });
 
     return NextResponse.json({ ok: true, ...result, isDemo: user.isDemo }, { headers });

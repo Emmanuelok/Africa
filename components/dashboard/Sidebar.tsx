@@ -18,6 +18,7 @@ import {
   Palette,
   LogOut
 } from "lucide-react";
+import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -52,10 +53,11 @@ export function DashboardSidebar({
           <div className="grid h-8 w-8 place-items-center rounded-lg bg-terracotta-600 text-sm font-semibold text-white">
             {workspaceName.charAt(0)}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold">{workspaceName}</div>
             <div className="text-xs uppercase tracking-wide text-ink-500">{plan} plan</div>
           </div>
+          <NotificationsBell />
         </div>
       </div>
 

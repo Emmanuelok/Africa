@@ -4,6 +4,7 @@ import { saveDetermination, listDeterminations } from "@/lib/data/determinations
 import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/ratelimit";
 import { dispatch } from "@/lib/webhooks/dispatch";
 import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
+import { notify } from "@/lib/server/notify";
 
 export const runtime = "nodejs";
 
@@ -70,11 +71,29 @@ export async function POST(req: Request) {
         event: body.qualifies === "yes" ? "determination.qualified" : "determination.marginal",
         object: { id: result.id, hs_code: String(body.hsCode) }
       });
+      if (body.qualifies === "marginal") {
+        notify({
+          workspaceId: user.workspaceId,
+          userId: user.id,
+          kind: "determination.marginal",
+          title: `Marginal: ${String(body.description ?? "shipment").slice(0, 60)}`,
+          body: `RVC close to threshold — review the rule applied for HS ${body.hsCode}.`,
+          target: "/dashboard/determinations"
+        });
+      }
     } else {
       void dispatch({
         workspaceId: user.workspaceId,
         event: "determination.rejected",
         object: { id: result.id, hs_code: String(body.hsCode) }
+      });
+      notify({
+        workspaceId: user.workspaceId,
+        userId: user.id,
+        kind: "determination.rejected",
+        title: `Shipment did not qualify`,
+        body: `HS ${body.hsCode} fails AfCFTA Rules of Origin. Consider sourcing more inputs within AfCFTA.`,
+        target: "/dashboard/determinations"
       });
     }
 

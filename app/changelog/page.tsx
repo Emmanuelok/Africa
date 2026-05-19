@@ -13,6 +13,20 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.14.0",
+    type: "feature",
+    title: "Mobile dashboard, real translations, notifications",
+    bullets: [
+      "MobileDashboardBar with hamburger drawer surfaces the full 13-item dashboard nav on phones (was hidden md:flex before)",
+      "i18n dictionary expanded across 5 languages: hero, nav, footer, pricing, trust signals, stats, CTAs",
+      "Per-locale layout applies dir='rtl' for Arabic + lang attribute; locale-aware Intl formatters (currency, number, date, relative time)",
+      "In-product notifications: notifications table + lib/server/notify.ts helper + /api/notifications + /api/notifications/read",
+      "NotificationsBell component in both desktop sidebar header and mobile topbar with unread count badge, mark-all-read, deep-link targets",
+      "Determinations and certificates fire notifications: marginal warnings, rejection guidance, certificate-issued events"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.13.0",
     type: "feature",
     title: "v1/certificates + v1/shipments, white-label branding, onboarding tour",

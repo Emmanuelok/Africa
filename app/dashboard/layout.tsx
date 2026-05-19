@@ -1,5 +1,6 @@
 import { getSessionUser } from "@/lib/server/session";
 import { DashboardSidebar } from "@/components/dashboard/Sidebar";
+import { MobileDashboardBar } from "@/components/dashboard/MobileDashboardBar";
 import { DemoBanner } from "@/components/dashboard/DemoBanner";
 import { OnboardingTour } from "@/components/dashboard/OnboardingTour";
 
@@ -18,6 +19,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           userEmail={user.email}
         />
         <div className="min-w-0 flex-1">
+          <MobileDashboardBar
+            workspaceName={user.workspaceName}
+            plan={user.plan}
+            userEmail={user.email}
+          />
           {user.isDemo && <DemoBanner />}
           <div className="px-4 py-6 md:px-8 md:py-8">{children}</div>
         </div>
