@@ -1,6 +1,12 @@
 import { auth } from "@/auth";
 import { getDb, schema } from "@/lib/db/client";
 import { eq } from "drizzle-orm";
+import {
+  listWorkspacesForUser,
+  pickActiveWorkspace,
+  getActiveWorkspaceIdFromCookie,
+  type WorkspaceSummary
+} from "@/lib/server/workspace";
 
 export type SessionUser = {
   id: string;
@@ -10,8 +16,15 @@ export type SessionUser = {
   workspaceId: string;
   workspaceName: string;
   plan: "free" | "pro" | "bulk" | "forwarder";
+  role: "owner" | "admin" | "member";
+  workspaces: WorkspaceSummary[];
   isDemo: boolean;
 };
+
+const DEMO_WORKSPACES: WorkspaceSummary[] = [
+  { id: "demo-workspace", name: "Highlands Coffee Cooperative", plan: "pro", role: "owner" },
+  { id: "demo-workspace-2", name: "Nairobi Roasters Ltd", plan: "free", role: "admin" }
+];
 
 export const DEMO_USER: SessionUser = {
   id: "demo-user",
@@ -21,12 +34,11 @@ export const DEMO_USER: SessionUser = {
   workspaceId: "demo-workspace",
   workspaceName: "Highlands Coffee Cooperative",
   plan: "pro",
+  role: "owner",
+  workspaces: DEMO_WORKSPACES,
   isDemo: true
 };
 
-// Returns the current user. Falls back to a demo user when auth isn't
-// configured OR when the visitor isn't logged in — so dashboard pages always
-// have something coherent to render.
 export async function getSessionUser(): Promise<SessionUser> {
   try {
     const session = await auth();
@@ -42,45 +54,40 @@ export async function getSessionUser(): Promise<SessionUser> {
     const user = rows[0];
     if (!user) return DEMO_USER;
 
-    // Find or create a default workspace.
-    const ws = await db
-      .select()
-      .from(schema.workspaceMembers)
-      .where(eq(schema.workspaceMembers.userId, user.id))
-      .limit(1);
+    let workspaces = await listWorkspacesForUser(user.id);
 
-    let workspaceId = ws[0]?.workspaceId;
-    let workspaceName = user.name ?? user.email;
-    let plan: SessionUser["plan"] = "free";
-
-    if (workspaceId) {
-      const wsRow = await db.select().from(schema.workspaces).where(eq(schema.workspaces.id, workspaceId)).limit(1);
-      if (wsRow[0]) {
-        workspaceName = wsRow[0].name;
-        plan = (wsRow[0].plan as SessionUser["plan"]) ?? "free";
-      }
-    } else {
+    // First-time user — provision a default workspace.
+    if (workspaces.length === 0) {
       const created = await db
         .insert(schema.workspaces)
         .values({ name: user.name ?? user.email, plan: "free" })
-        .returning({ id: schema.workspaces.id, name: schema.workspaces.name });
-      workspaceId = created[0].id;
-      workspaceName = created[0].name;
+        .returning({ id: schema.workspaces.id, name: schema.workspaces.name, plan: schema.workspaces.plan });
       await db.insert(schema.workspaceMembers).values({
-        workspaceId,
+        workspaceId: created[0].id,
         userId: user.id,
         role: "owner"
       });
+      workspaces = [{
+        id: created[0].id,
+        name: created[0].name,
+        plan: (created[0].plan as WorkspaceSummary["plan"]) ?? "free",
+        role: "owner"
+      }];
     }
+
+    const preferred = getActiveWorkspaceIdFromCookie();
+    const active = pickActiveWorkspace(workspaces, preferred)!;
 
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       image: user.image,
-      workspaceId: workspaceId!,
-      workspaceName,
-      plan,
+      workspaceId: active.id,
+      workspaceName: active.name,
+      plan: active.plan,
+      role: active.role,
+      workspaces,
       isDemo: false
     };
   } catch (err) {

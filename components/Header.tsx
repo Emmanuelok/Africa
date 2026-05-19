@@ -4,21 +4,26 @@ import { Button } from "@/components/ui/Button";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { Badge } from "@/components/ui/Badge";
 import { MobileMenu } from "@/components/MobileMenu";
-
-const PRIMARY = [
-  { href: "/afriorigin", label: "AfriOrigin", hot: true },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/developers", label: "Developers" }
-];
-
-const SECONDARY = [
-  { href: "/commodities", label: "Live Map" },
-  { href: "/docs", label: "Docs" },
-  { href: "/afcfta", label: "AfCFTA" },
-  { href: "/research", label: "Research" }
-];
+import { SearchDialog } from "@/components/SearchDialog";
+import { getServerLocale } from "@/lib/i18n/cookie";
+import { t } from "@/lib/i18n/locales";
 
 export function Header() {
+  const locale = getServerLocale();
+
+  const primary = [
+    { href: "/afriorigin", label: t(locale, "nav.afriorigin"), hot: true },
+    { href: "/pricing", label: t(locale, "nav.pricing") },
+    { href: "/developers", label: t(locale, "nav.developers") }
+  ];
+
+  const secondary = [
+    { href: "/commodities", label: t(locale, "nav.map") },
+    { href: "/docs", label: t(locale, "nav.docs") },
+    { href: "/afcfta", label: t(locale, "nav.afcfta") },
+    { href: "/research", label: t(locale, "nav.research") }
+  ];
+
   return (
     <header className="sticky top-0 z-40 border-b border-ink-200 bg-white/85 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">
@@ -32,7 +37,7 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-5 lg:flex">
-          {PRIMARY.map((n) => (
+          {primary.map((n) => (
             <Link
               key={n.href}
               href={n.href}
@@ -43,7 +48,7 @@ export function Header() {
             </Link>
           ))}
           <span className="h-4 w-px bg-ink-200" />
-          {SECONDARY.map((n) => (
+          {secondary.map((n) => (
             <Link
               key={n.href}
               href={n.href}
@@ -55,14 +60,15 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <SearchDialog />
           <div className="hidden sm:block">
-            <LocaleSwitcher />
+            <LocaleSwitcher current={locale} />
           </div>
           <Button href="/signin" variant="ghost" size="sm" className="hidden lg:inline-flex">
-            Sign in
+            {t(locale, "nav.signin")}
           </Button>
           <Button href="/register" size="sm" className="hidden sm:inline-flex">
-            Start free
+            {t(locale, "nav.start_free")}
           </Button>
           <MobileMenu />
         </div>

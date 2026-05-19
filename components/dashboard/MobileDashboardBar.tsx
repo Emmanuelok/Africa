@@ -22,6 +22,8 @@ import {
   LogOut
 } from "lucide-react";
 import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
+import { WorkspaceSwitcher } from "@/components/dashboard/WorkspaceSwitcher";
+import type { WorkspaceSummary } from "@/lib/server/workspace";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -40,31 +42,36 @@ const NAV = [
 ];
 
 export function MobileDashboardBar({
-  workspaceName,
-  plan,
+  workspaceId,
+  workspaces,
   userEmail
 }: {
-  workspaceName: string;
-  plan: string;
+  workspaceId: string;
+  workspaces: WorkspaceSummary[];
   userEmail: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const current = NAV.find((n) => (n.exact ? pathname === n.href : pathname.startsWith(n.href)));
+  const active = workspaces.find((w) => w.id === workspaceId);
 
   return (
     <>
-      <div className="sticky top-[57px] z-30 flex items-center gap-3 border-b border-ink-200 bg-white px-4 py-2.5 md:hidden">
+      <div className="sticky top-[57px] z-30 flex items-center gap-2 border-b border-ink-200 bg-white px-3 py-2 md:hidden">
         <button
           onClick={() => setOpen(true)}
           aria-label="Open dashboard menu"
-          className="grid h-9 w-9 place-items-center rounded-lg text-ink-700 hover:bg-ink-100"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink-700 hover:bg-ink-100"
         >
           <Menu className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{workspaceName}</div>
-          <div className="text-xs uppercase tracking-wide text-ink-500">{plan} · {current?.label ?? ""}</div>
+          <WorkspaceSwitcher workspaces={workspaces} activeId={workspaceId} />
+          {current && (
+            <div className="mt-0.5 px-1 text-[10px] uppercase tracking-wide text-ink-500">
+              {current.label}
+            </div>
+          )}
         </div>
         <NotificationsBell />
       </div>
@@ -75,8 +82,8 @@ export function MobileDashboardBar({
           <div className="absolute left-0 top-0 flex h-full w-[88%] max-w-sm flex-col bg-white shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between border-b border-ink-200 px-4 py-3">
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">{workspaceName}</div>
-                <div className="text-xs uppercase tracking-wide text-ink-500">{plan} plan</div>
+                <div className="truncate text-sm font-semibold">{active?.name ?? "Workspace"}</div>
+                <div className="text-xs uppercase tracking-wide text-ink-500">{active?.plan ?? ""} plan</div>
               </div>
               <button
                 onClick={() => setOpen(false)}

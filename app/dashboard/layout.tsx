@@ -14,14 +14,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-[calc(100vh-65px)] bg-sand-50/40">
       <div className="mx-auto flex max-w-[1400px]">
         <DashboardSidebar
-          workspaceName={user.workspaceName}
-          plan={user.plan}
+          workspaceId={user.workspaceId}
+          workspaces={user.workspaces}
           userEmail={user.email}
         />
         <div className="min-w-0 flex-1">
           <MobileDashboardBar
-            workspaceName={user.workspaceName}
-            plan={user.plan}
+            workspaceId={user.workspaceId}
+            workspaces={user.workspaces}
             userEmail={user.email}
           />
           {user.isDemo && <DemoBanner />}

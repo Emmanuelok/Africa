@@ -19,6 +19,8 @@ import {
   LogOut
 } from "lucide-react";
 import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
+import { WorkspaceSwitcher } from "@/components/dashboard/WorkspaceSwitcher";
+import type { WorkspaceSummary } from "@/lib/server/workspace";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -37,25 +39,21 @@ const NAV = [
 ];
 
 export function DashboardSidebar({
-  workspaceName,
-  plan,
+  workspaceId,
+  workspaces,
   userEmail
 }: {
-  workspaceName: string;
-  plan: string;
+  workspaceId: string;
+  workspaces: WorkspaceSummary[];
   userEmail: string;
 }) {
   const pathname = usePathname();
   return (
     <aside className="hidden w-60 shrink-0 border-r border-ink-200 bg-white md:flex md:flex-col">
-      <div className="border-b border-ink-200 p-4">
+      <div className="border-b border-ink-200 p-3">
         <div className="flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-terracotta-600 text-sm font-semibold text-white">
-            {workspaceName.charAt(0)}
-          </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold">{workspaceName}</div>
-            <div className="text-xs uppercase tracking-wide text-ink-500">{plan} plan</div>
+            <WorkspaceSwitcher workspaces={workspaces} activeId={workspaceId} />
           </div>
           <NotificationsBell />
         </div>

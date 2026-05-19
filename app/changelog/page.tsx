@@ -13,6 +13,20 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.15.0",
+    type: "feature",
+    title: "Platform search, workspace switcher, locale cookie reaches Header + Footer",
+    bullets: [
+      "⌘K search dialog across docs, pages, marketplace products, suppliers, countries, commodities — token-scored, edge-cached for 5 minutes",
+      "Standalone /search results page with grouped sections by content kind",
+      "Workspace switcher dropdown in desktop sidebar and mobile topbar — active workspace persisted in cookie, validated against memberships on every switch",
+      "getSessionUser returns the full workspaces[] list and honours the active cookie selection; demo mode exposes two demo workspaces",
+      "Locale stored in sokoni_locale cookie via /api/locale POST — LocaleSwitcher actually switches the language now",
+      "Header and Footer read the cookie server-side and translate nav, footer columns, and CTAs in all 5 languages without forcing a /[locale] redirect"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.14.0",
     type: "feature",
     title: "Mobile dashboard, real translations, notifications",
