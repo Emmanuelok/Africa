@@ -282,6 +282,25 @@ export const auditLog = pgTable(
 );
 
 // =============================================================================
+// Notification preferences (per-user, per-kind email/in-product toggles)
+// =============================================================================
+export const notificationPreferences = pgTable(
+  "notification_preferences",
+  {
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    kind: text("kind").notNull(), // matches NotificationKind values
+    inProduct: boolean("in_product").notNull().default(true),
+    email: boolean("email").notNull().default(false),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.kind] })
+  })
+);
+
+// =============================================================================
 // Notifications (in-product)
 // =============================================================================
 export const notifications = pgTable(

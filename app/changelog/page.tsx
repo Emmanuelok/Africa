@@ -13,6 +13,22 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.16.0",
+    type: "feature",
+    title: "Activity CSV export, notification prefs, workspace creation, Stripe wiring",
+    bullets: [
+      "GET /api/audit/export streams workspace activity as CSV (10k row cap); download button live on /dashboard/activity",
+      "notification_preferences table — per-user × per-kind in-product + email toggles with 12 notification kinds grouped into Shipments / Compliance / Billing / System",
+      "/dashboard/settings/notifications page with grouped toggle tables and sticky save bar; defaults from the kind catalogue",
+      "notify() helper checks prefs before persisting in-product + sends transactional email via Resend when email channel is on",
+      "POST /api/workspaces creates a workspace, joins the user as owner, auto-switches the active-workspace cookie",
+      "CreateWorkspaceDialog modal wired into the WorkspaceSwitcher's 'Create workspace' action",
+      "Stripe webhook now updates workspaces.plan, fires workspace.upgraded / workspace.downgraded webhooks, sends billing.upgraded notifications, and writes audit log entries; payment_failed events surface as notifications",
+      "Settings page links to new notification preferences subpage"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.15.0",
     type: "feature",
     title: "Platform search, workspace switcher, locale cookie reaches Header + Footer",

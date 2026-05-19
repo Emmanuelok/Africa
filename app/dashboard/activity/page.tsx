@@ -9,7 +9,8 @@ import {
   CreditCard,
   LogIn,
   UserPlus,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Download
 } from "lucide-react";
 import { getSessionUser } from "@/lib/server/session";
 import { getDb, schema } from "@/lib/db/client";
@@ -61,12 +62,20 @@ export default async function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-display text-2xl font-semibold md:text-3xl">Activity</h1>
-        <p className="mt-1 text-sm text-ink-600">
-          Audit trail for compliance and forensics. Every API call, webhook event, member action,
-          and billing change appears here.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-semibold md:text-3xl">Activity</h1>
+          <p className="mt-1 text-sm text-ink-600">
+            Audit trail for compliance and forensics. Every API call, webhook event, member action,
+            and billing change appears here.
+          </p>
+        </div>
+        <a
+          href="/api/audit/export"
+          className="inline-flex items-center gap-2 rounded-lg border border-ink-300 bg-white px-3 py-2 text-sm font-medium hover:bg-ink-50"
+        >
+          <Download className="h-4 w-4" /> Export CSV
+        </a>
       </header>
 
       <Card className="p-0">

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown, Plus, Loader2 } from "lucide-react";
+import { CreateWorkspaceDialog } from "@/components/dashboard/CreateWorkspaceDialog";
 
 type Workspace = {
   id: string;
@@ -99,13 +100,16 @@ export function WorkspaceSwitcher({
             ))}
           </ul>
           <div className="border-t border-ink-100 p-1.5">
-            <button
-              disabled
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-ink-500 hover:bg-sand-50 disabled:cursor-not-allowed"
-              title="Coming soon"
-            >
-              <Plus className="h-3.5 w-3.5" /> Create workspace
-            </button>
+            <CreateWorkspaceDialog
+              trigger={
+                <button
+                  onClick={() => setOpen(false)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-ink-700 hover:bg-sand-50"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Create workspace
+                </button>
+              }
+            />
           </div>
         </div>
       )}
