@@ -13,6 +13,21 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.13.0",
+    type: "feature",
+    title: "v1/certificates + v1/shipments, white-label branding, onboarding tour",
+    bullets: [
+      "POST /api/v1/certificates — key-authed certificate creation returning ref, PDF URL, and QR verification URL",
+      "POST /api/v1/shipments — end-to-end pipeline (classify → determine origin → save → optional certificate) at $1.80/call as advertised",
+      "Per-workspace white-label branding (Forwarder tier): brand name, logo URL, primary colour, footer note persisted to workspaces.brand_*",
+      "Certificate PDF picks up workspace branding when plan is forwarder — accent colour on header rule, brand logo or name, custom footer text",
+      "/dashboard/branding with live preview, locked behind Forwarder upsell on lower tiers",
+      "/dashboard/settings actually persists workspace name, default origin country, default locale via PATCH /api/workspace",
+      "First-run onboarding tour: 5-step walkthrough (welcome, wizard, history, certificates, API keys), localStorage-skipped on subsequent visits"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.12.0",
     type: "feature",
     title: "Public cert verification + QR codes, Vercel Blob, KYB, team invites",

@@ -1,6 +1,7 @@
 import { getSessionUser } from "@/lib/server/session";
 import { DashboardSidebar } from "@/components/dashboard/Sidebar";
 import { DemoBanner } from "@/components/dashboard/DemoBanner";
+import { OnboardingTour } from "@/components/dashboard/OnboardingTour";
 
 // auth() reads cookies — every dashboard route must be dynamic.
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="px-4 py-6 md:px-8 md:py-8">{children}</div>
         </div>
       </div>
+      <OnboardingTour workspaceName={user.workspaceName} />
     </div>
   );
 }

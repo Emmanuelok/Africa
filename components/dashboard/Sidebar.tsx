@@ -15,6 +15,7 @@ import {
   Webhook,
   Activity,
   BadgeCheck,
+  Palette,
   LogOut
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ const NAV = [
   { href: "/dashboard/activity", label: "Activity", icon: Activity },
   { href: "/dashboard/team", label: "Team", icon: Users2 },
   { href: "/dashboard/verification", label: "Verification", icon: BadgeCheck },
+  { href: "/dashboard/branding", label: "Branding", icon: Palette },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/settings", label: "Settings", icon: Settings }
 ];

@@ -138,6 +138,15 @@ export async function saveCertificate(input: SaveCertificateInput): Promise<{ id
             .where(eq(schema.determinations.id, input.determinationId))
             .limit(1))[0];
 
+      // Load workspace branding (only applied if plan === forwarder)
+      const wsRows = await db
+        .select()
+        .from(schema.workspaces)
+        .where(eq(schema.workspaces.id, input.workspaceId))
+        .limit(1);
+      const ws = wsRows[0];
+      const useBranding = ws?.plan === "forwarder";
+
       const pdfBuf = await renderCertificatePdf({
         reference,
         issuedAt: new Date().toISOString(),
@@ -153,7 +162,13 @@ export async function saveCertificate(input: SaveCertificateInput): Promise<{ id
           unit: "kg"
         },
         originCriterion: det?.ruleApplied ?? "Wholly Obtained",
-        preferentialRate: det?.afcftaRate ? Number(det.afcftaRate) : undefined
+        preferentialRate: det?.afcftaRate ? Number(det.afcftaRate) : undefined,
+        brand: useBranding && ws?.brandName ? {
+          name: ws.brandName,
+          logoUrl: ws.brandLogoUrl,
+          primaryColor: ws.brandPrimaryColor,
+          footerNote: ws.brandFooterNote
+        } : undefined
       });
       const pdfUrl = await putCertificatePdf(reference, pdfBuf);
       if (pdfUrl) {

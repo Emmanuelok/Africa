@@ -82,6 +82,14 @@ export const workspaces = pgTable("workspaces", {
   kybRegistrationNumber: text("kyb_registration_number"),
   kybVerifiedAt: timestamp("kyb_verified_at"),
   kybRejectionReason: text("kyb_rejection_reason"),
+  // Branding (Forwarder tier white-label)
+  brandName: text("brand_name"),
+  brandLogoUrl: text("brand_logo_url"),
+  brandPrimaryColor: text("brand_primary_color"),
+  brandFooterNote: text("brand_footer_note"),
+  // Workspace preferences
+  defaultOriginCountry: text("default_origin_country"),
+  defaultLocale: text("default_locale").default("en").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
