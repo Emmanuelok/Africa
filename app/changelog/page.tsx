@@ -13,6 +13,22 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.11.0",
+    type: "feature",
+    title: "Webhooks, audit log, real account registration",
+    bullets: [
+      "Webhook endpoints (workspace-scoped) with HMAC-signed delivery, 6-step exponential retry, signature verification examples in dashboard",
+      "9-event taxonomy: classification/determination/certificate/workspace lifecycle events",
+      "/dashboard/webhooks with create, test, delivery log, enable/disable, revoke",
+      "determination.created + certificate.issued events fired automatically from existing API routes",
+      "audit_log table with workspace+user attribution, IP, user agent, action taxonomy, 7-year retention plan",
+      "/dashboard/activity surfacing every API call, member action, webhook event, billing change",
+      "Real /register page with email+password+captcha+strength meter wired to /api/auth/register",
+      "Header CTA now routes to /register (waitlist still available at /signup)"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.10.0",
     type: "feature",
     title: "Server-side PDF certificates, AI cache, Stripe portal, CSV bulk",

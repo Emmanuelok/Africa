@@ -184,3 +184,68 @@ export const apiUsage = pgTable(
     createdIdx: index("usage_created_idx").on(t.createdAt)
   })
 );
+
+// =============================================================================
+// Webhooks
+// =============================================================================
+export const webhookEndpoints = pgTable("webhook_endpoints", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .notNull(),
+  url: text("url").notNull(),
+  description: text("description"),
+  secret: text("secret").notNull(), // HMAC signing key
+  events: jsonb("events").$type<string[]>().notNull().default([]),
+  enabled: boolean("enabled").notNull().default(true),
+  lastDeliveryAt: timestamp("last_delivery_at"),
+  consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const webhookDeliveries = pgTable(
+  "webhook_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    endpointId: uuid("endpoint_id")
+      .references(() => webhookEndpoints.id, { onDelete: "cascade" })
+      .notNull(),
+    event: text("event").notNull(),
+    payload: jsonb("payload"),
+    statusCode: integer("status_code"),
+    responseBody: text("response_body"),
+    durationMs: integer("duration_ms"),
+    attempts: integer("attempts").notNull().default(1),
+    succeeded: boolean("succeeded").notNull().default(false),
+    nextRetryAt: timestamp("next_retry_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    endpointIdx: index("delivery_endpoint_idx").on(t.endpointId),
+    createdIdx: index("delivery_created_idx").on(t.createdAt)
+  })
+);
+
+// =============================================================================
+// Audit log
+// =============================================================================
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    actor: text("actor"), // human-readable when user is anonymous (e.g. api key name, "system")
+    action: text("action").notNull(), // e.g. "determination.created", "webhook.endpoint.created"
+    target: text("target"), // resource id this action applies to
+    metadata: jsonb("metadata"),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    wsIdx: index("audit_workspace_idx").on(t.workspaceId),
+    createdIdx: index("audit_created_idx").on(t.createdAt),
+    actionIdx: index("audit_action_idx").on(t.action)
+  })
+);

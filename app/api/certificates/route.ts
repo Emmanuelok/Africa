@@ -4,6 +4,8 @@ import { saveCertificate, listCertificates } from "@/lib/data/determinations";
 import { sendEmail } from "@/lib/email/resend";
 import { certificateIssuedEmail } from "@/lib/email/templates";
 import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/ratelimit";
+import { dispatch } from "@/lib/webhooks/dispatch";
+import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
 
 export const runtime = "nodejs";
 
@@ -46,6 +48,31 @@ export async function POST(req: Request) {
       });
       void sendEmail({ to: user.email, subject: tpl.subject, html: tpl.html, text: tpl.text });
     }
+
+    const { ipAddress, userAgent } = ipAndUaFromRequest(req);
+    audit({
+      workspaceId: user.workspaceId,
+      userId: user.id,
+      action: "certificate.issued",
+      target: result.id,
+      metadata: { reference: result.reference, hsCode: body.hsCode },
+      ipAddress,
+      userAgent
+    });
+
+    void dispatch({
+      workspaceId: user.workspaceId,
+      event: "certificate.issued",
+      object: {
+        id: result.id,
+        reference: result.reference,
+        determination_id: String(body.determinationId),
+        hs_code: String(body.hsCode),
+        origin_country: String(body.originCountry),
+        destination_country: String(body.destinationCountry),
+        pdf_url: `/api/certificates/${result.id}/pdf`
+      }
+    });
 
     return NextResponse.json({ ok: true, ...result, isDemo: user.isDemo }, { headers });
   } catch (err) {

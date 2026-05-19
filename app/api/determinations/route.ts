@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/server/session";
 import { saveDetermination, listDeterminations } from "@/lib/data/determinations";
 import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/ratelimit";
+import { dispatch } from "@/lib/webhooks/dispatch";
+import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
 
 export const runtime = "nodejs";
 
@@ -38,6 +40,43 @@ export async function POST(req: Request) {
       afcftaRate: numOrUndef(body.afcftaRate),
       savingsUsd: numOrUndef(body.savingsUsd)
     });
+
+    const { ipAddress, userAgent } = ipAndUaFromRequest(req);
+    audit({
+      workspaceId: user.workspaceId,
+      userId: user.id,
+      action: "determination.created",
+      target: result.id,
+      metadata: { hsCode: body.hsCode, qualifies: body.qualifies, savingsUsd: body.savingsUsd },
+      ipAddress,
+      userAgent
+    });
+
+    void dispatch({
+      workspaceId: user.workspaceId,
+      event: "determination.created",
+      object: {
+        id: result.id,
+        hs_code: String(body.hsCode),
+        qualifies: body.qualifies,
+        origin: body.originCountry,
+        destination: body.destinationCountry,
+        savings_usd: body.savingsUsd ?? 0
+      }
+    });
+    if (body.qualifies === "yes" || body.qualifies === "marginal") {
+      void dispatch({
+        workspaceId: user.workspaceId,
+        event: body.qualifies === "yes" ? "determination.qualified" : "determination.marginal",
+        object: { id: result.id, hs_code: String(body.hsCode) }
+      });
+    } else {
+      void dispatch({
+        workspaceId: user.workspaceId,
+        event: "determination.rejected",
+        object: { id: result.id, hs_code: String(body.hsCode) }
+      });
+    }
 
     return NextResponse.json({ ok: true, ...result, isDemo: user.isDemo }, { headers });
   } catch (err) {

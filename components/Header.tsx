@@ -61,7 +61,7 @@ export function Header() {
           <Button href="/signin" variant="ghost" size="sm" className="hidden lg:inline-flex">
             Sign in
           </Button>
-          <Button href="/signup" size="sm" className="hidden sm:inline-flex">
+          <Button href="/register" size="sm" className="hidden sm:inline-flex">
             Start free
           </Button>
           <MobileMenu />
