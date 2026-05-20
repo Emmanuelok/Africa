@@ -13,6 +13,20 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.17.0",
+    type: "feature",
+    title: "Workspace delete + export, real Stripe subscription details",
+    bullets: [
+      "DELETE /api/workspaces/[id] cancels Stripe subscription, removes certificate PDFs from Blob, cascades deletes via FK; only the owner can call",
+      "Name-match confirmation in DeleteWorkspaceDialog prevents fat-finger deletes; clears active-workspace cookie on success",
+      "GET /api/workspaces/[id]/export streams a GDPR-style JSON dump of every workspace table (members, determinations, certificates, audit, notifications, webhooks, api keys) with secrets redacted",
+      "Settings danger zone wired to both actions: Export workspace data anchor + Delete dialog gated to owners",
+      "GET /api/billing/subscription returns live Stripe subscription details: status, period end, cancel-at-period-end, payment method, plan limits",
+      "/dashboard/billing rebuilt with SubscriptionPanel client component showing renewal date, days-until-renewal, cancellation warning banner, payment-method card, and plan-limits grid"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.16.0",
     type: "feature",
     title: "Activity CSV export, notification prefs, workspace creation, Stripe wiring",

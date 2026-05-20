@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { getSessionUser } from "@/lib/server/session";
 import { getDb, schema } from "@/lib/db/client";
 import { SettingsForm } from "@/components/dashboard/SettingsForm";
+import { DeleteWorkspaceDialog } from "@/components/dashboard/DeleteWorkspaceDialog";
 
 export const metadata = { title: "Settings — Sokoni" };
 
@@ -87,20 +88,31 @@ export default async function SettingsPage() {
         <h2 className="font-semibold">Danger zone</h2>
         <p className="mt-1 text-sm text-ink-600">Permanent actions. Cannot be undone.</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            disabled
-            className="rounded-lg border border-terracotta-300 px-4 py-2 text-sm font-medium text-terracotta-700 hover:bg-terracotta-50 disabled:opacity-50"
-            title="Coming soon"
+          <a
+            href={`/api/workspaces/${user.workspaceId}/export`}
+            className="rounded-lg border border-ink-300 px-4 py-2 text-sm font-medium hover:bg-ink-50"
           >
             Export workspace data
-          </button>
-          <button
-            disabled
-            className="rounded-lg border border-terracotta-300 px-4 py-2 text-sm font-medium text-terracotta-700 hover:bg-terracotta-50 disabled:opacity-50"
-            title="Coming soon"
-          >
-            Delete workspace
-          </button>
+          </a>
+          {user.role === "owner" && !user.isDemo ? (
+            <DeleteWorkspaceDialog
+              workspaceId={user.workspaceId}
+              workspaceName={user.workspaceName}
+              trigger={
+                <button className="rounded-lg border border-terracotta-300 bg-white px-4 py-2 text-sm font-medium text-terracotta-700 hover:bg-terracotta-50">
+                  Delete workspace
+                </button>
+              }
+            />
+          ) : (
+            <button
+              disabled
+              title={user.isDemo ? "Demo mode" : "Only the workspace owner can delete"}
+              className="rounded-lg border border-terracotta-300 px-4 py-2 text-sm font-medium text-terracotta-700 opacity-50"
+            >
+              Delete workspace
+            </button>
+          )}
         </div>
       </Card>
 
