@@ -55,10 +55,11 @@ curl -X POST https://api.sokoni.africa/v1/shipments \\
 
       <h2>OpenAPI</h2>
       <p>
-        The full OpenAPI 3.1 spec is available at{" "}
-        <code>https://api.sokoni.africa/v1/openapi.json</code>. Import into Postman, Insomnia, or
-        any OpenAPI-compatible client to generate your own SDKs.
+        The full OpenAPI 3.1 spec is served at{" "}
+        <a href="/api/openapi.json"><code>/api/openapi.json</code></a>. Import into Postman,
+        Insomnia, or any OpenAPI-compatible client to generate your own SDKs.
       </p>
+      <pre>{`curl https://sokoni.africa/api/openapi.json | jq`}</pre>
 
       <h2>Next</h2>
       <ul>

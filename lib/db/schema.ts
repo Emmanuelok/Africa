@@ -289,6 +289,24 @@ export const auditLog = pgTable(
 );
 
 // =============================================================================
+// Suppressed emails — bounces, complaints, hard fails. Resend posts to
+// /api/webhooks/resend and we record the address here. sendEmail() consults
+// this list before delivering to anything (transactional, magic links, digest).
+// =============================================================================
+export const suppressedEmails = pgTable(
+  "suppressed_emails",
+  {
+    email: text("email").primaryKey(),
+    reason: text("reason").notNull(), // "bounce" | "complaint" | "hard_bounce" | "manual"
+    detail: text("detail"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    createdIdx: index("suppressed_created_idx").on(t.createdAt)
+  })
+);
+
+// =============================================================================
 // Notification preferences (per-user, per-kind email/in-product toggles)
 // =============================================================================
 export const notificationPreferences = pgTable(

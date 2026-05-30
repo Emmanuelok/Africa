@@ -53,10 +53,20 @@ export async function classifyWithAI(description: string): Promise<Classificatio
   }
 
   try {
+    // Prompt caching — the system prompt is identical on every classify call,
+    // so we mark it ephemeral. Anthropic discounts subsequent reads by ~90%
+    // for cached input tokens; the first call within a 5-minute window pays
+    // a small write cost and warms the cache.
     const msg = await anthropic.messages.create({
       model: ANTHROPIC_MODEL,
       max_tokens: 600,
-      system: SYSTEM_PROMPT,
+      system: [
+        {
+          type: "text",
+          text: SYSTEM_PROMPT,
+          cache_control: { type: "ephemeral" }
+        }
+      ],
       messages: [{ role: "user", content: description }]
     });
 
@@ -117,7 +127,13 @@ export async function explainOriginWithAI(input: {
     const msg = await anthropic.messages.create({
       model: ANTHROPIC_MODEL,
       max_tokens: 250,
-      system: ROO_SYSTEM_PROMPT,
+      system: [
+        {
+          type: "text",
+          text: ROO_SYSTEM_PROMPT,
+          cache_control: { type: "ephemeral" }
+        }
+      ],
       messages: [{ role: "user", content: JSON.stringify(input) }]
     });
     const text = msg.content

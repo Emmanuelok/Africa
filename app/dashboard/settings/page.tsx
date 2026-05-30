@@ -5,6 +5,8 @@ import { getSessionUser } from "@/lib/server/session";
 import { getDb, schema } from "@/lib/db/client";
 import { SettingsForm } from "@/components/dashboard/SettingsForm";
 import { DeleteWorkspaceDialog } from "@/components/dashboard/DeleteWorkspaceDialog";
+import { ChangeEmailForm } from "@/components/dashboard/ChangeEmailForm";
+import { EmailChangeBanner } from "@/components/dashboard/EmailChangeBanner";
 
 export const metadata = { title: "Settings — Sokoni" };
 
@@ -37,6 +39,7 @@ export default async function SettingsPage() {
         <p className="mt-1 text-sm text-ink-600">Profile, workspace, and notification preferences.</p>
       </header>
 
+      <EmailChangeBanner />
       <Card>
         <h2 className="font-semibold">Profile</h2>
         <div className="mt-3 space-y-2 text-sm">
@@ -44,10 +47,15 @@ export default async function SettingsPage() {
             <span className="text-ink-500">Name</span>
             <span className="font-medium">{user.name ?? "—"}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex items-center justify-between">
             <span className="text-ink-500">Email</span>
             <span className="font-mono text-xs">{user.email}</span>
           </div>
+          {!user.isDemo && (
+            <div className="mt-2">
+              <ChangeEmailForm currentEmail={user.email} />
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-ink-500">User ID</span>
             <span className="font-mono text-xs">{user.id}</span>

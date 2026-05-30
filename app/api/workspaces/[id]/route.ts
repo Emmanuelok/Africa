@@ -7,6 +7,8 @@ import { ACTIVE_WORKSPACE_COOKIE } from "@/lib/server/workspace";
 import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
 import { getStripe } from "@/lib/billing/stripe";
 import { deleteCertificatePdf } from "@/lib/blob/store";
+import { verifyPassword } from "@/lib/auth/password";
+import { verifyTotpToken, consumeRecoveryCode } from "@/lib/auth/totp";
 
 export const runtime = "nodejs";
 
@@ -37,7 +39,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   // Confirm via the supplied name match — prevents fat-finger deletes.
-  let body: { confirm?: string } = {};
+  let body: { confirm?: string; password?: string; totp?: string } = {};
   try { body = await req.json(); } catch {}
   const wsRows = await db
     .select()
@@ -46,6 +48,30 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     .limit(1);
   const ws = wsRows[0];
   if (!ws) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+
+  // Re-auth: password + (TOTP code or recovery code) when 2FA is enabled.
+  // A hijacked session shouldn't be able to destroy data without a fresh
+  // proof of identity.
+  if (!body?.password) {
+    return NextResponse.json({ error: "Password required", code: "password_required" }, { status: 401 });
+  }
+  const userRows = await db.select().from(schema.users).where(eq(schema.users.id, user.id)).limit(1);
+  const u = userRows[0];
+  if (!u?.passwordHash) return NextResponse.json({ error: "Account missing a password" }, { status: 400 });
+  if (!(await verifyPassword(body.password, u.passwordHash))) {
+    return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
+  }
+  if (u.totpEnabled) {
+    const tok = String(body?.totp ?? "");
+    if (!tok) return NextResponse.json({ error: "2FA code required", code: "2fa_required" }, { status: 401 });
+    const totpOk = u.totpSecret ? verifyTotpToken(tok, u.totpSecret) : false;
+    if (!totpOk) {
+      const remaining = u.totpRecoveryCodes ? consumeRecoveryCode(tok, u.totpRecoveryCodes) : null;
+      if (!remaining) return NextResponse.json({ error: "Code did not verify" }, { status: 401 });
+      await db.update(schema.users).set({ totpRecoveryCodes: remaining, updatedAt: new Date() }).where(eq(schema.users.id, user.id));
+    }
+  }
+
   if (body?.confirm !== ws.name) {
     return NextResponse.json(
       { error: `Type "${ws.name}" exactly to confirm deletion.` },

@@ -13,6 +13,22 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.22.0",
+    type: "feature",
+    title: "Anthropic prompt caching, Resend bounce handling, OpenAPI spec, re-auth on workspace delete, email change",
+    bullets: [
+      "Anthropic prompt caching: system prompts marked cache_control: 'ephemeral' on both classify and explain-origin calls — Anthropic discounts cached input tokens ~90% on warm reads (5-min window), cutting per-call cost roughly in half on bursty workloads",
+      "Resend bounce/complaint webhook at /api/webhooks/resend: Svix HMAC-verified, persists hard-bounce and complaint events to suppressed_emails table; soft (transient) bounces are not suppressed",
+      "sendEmail now consults suppressed_emails before delivery — anything on the list is silently dropped so we don't burn sender reputation by retrying dead addresses",
+      "OpenAPI 3.1 spec at /api/openapi.json — describes all 5 v1 endpoints with auth, scopes, request/response schemas, Idempotency-Key header support, and 401/402/403/429 responses. Imports cleanly into Postman/Insomnia",
+      "Docs page now links the live spec endpoint (previously fabricated)",
+      "Workspace delete now requires password (and TOTP when enabled) in addition to name-match — prevents hijacked-session damage. DeleteWorkspaceDialog reveals the 2FA field on a code:2fa_required response",
+      "Email change flow: POST /api/users/me/email accepts new email + password re-auth, sends verification to NEW address; GET /api/users/me/email/confirm consumes the token and swaps the email atomically. Old address stays the login until confirmed",
+      "ChangeEmailForm + EmailChangeBanner wired into /dashboard/settings profile section"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.21.0",
     type: "feature",
     title: "TOTP 2FA + recovery codes, session management, user delete (GDPR), API key scoping",

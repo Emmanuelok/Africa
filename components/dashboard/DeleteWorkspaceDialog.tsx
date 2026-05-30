@@ -15,22 +15,37 @@ export function DeleteWorkspaceDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
+  const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
+  const [needsTotp, setNeedsTotp] = useState(false);
   const [status, setStatus] = useState<"idle" | "deleting" | "err">("idle");
   const [error, setError] = useState("");
   const router = useRouter();
 
   async function submit() {
     if (confirm !== workspaceName) return;
+    if (!password) {
+      setStatus("err");
+      setError("Password required.");
+      return;
+    }
     setStatus("deleting");
     setError("");
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm })
+        body: JSON.stringify({ confirm, password, totp: totp || undefined })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Could not delete workspace");
+      if (!res.ok) {
+        if (data?.code === "2fa_required") {
+          setNeedsTotp(true);
+          setStatus("idle");
+          return;
+        }
+        throw new Error(data?.error ?? "Could not delete workspace");
+      }
       setOpen(false);
       router.push("/dashboard");
       router.refresh();
@@ -68,18 +83,40 @@ export function DeleteWorkspaceDialog({
               </button>
             </div>
 
-            <label className="mt-5 block">
-              <span className="text-xs uppercase tracking-wide text-ink-500">
-                Type the workspace name to confirm
-              </span>
-              <input
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                placeholder={workspaceName}
-                className="mt-1 w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm font-mono focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/20"
-                autoFocus
-              />
-            </label>
+            <div className="mt-5 space-y-3">
+              <label className="block">
+                <span className="text-xs uppercase tracking-wide text-ink-500">
+                  Type the workspace name to confirm
+                </span>
+                <input
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder={workspaceName}
+                  className="mt-1 w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm font-mono focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/20"
+                  autoFocus
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs uppercase tracking-wide text-ink-500">Password</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="mt-1 w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/20"
+                />
+              </label>
+              {needsTotp && (
+                <label className="block">
+                  <span className="text-xs uppercase tracking-wide text-ink-500">2FA code or recovery code</span>
+                  <input
+                    value={totp}
+                    onChange={(e) => setTotp(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-ink-200 bg-white px-3 py-2 font-mono text-sm focus:border-terracotta-500 focus:outline-none focus:ring-2 focus:ring-terracotta-500/20"
+                  />
+                </label>
+              )}
+            </div>
 
             {status === "err" && (
               <div className="mt-3 flex items-start gap-2 rounded-lg bg-terracotta-50 p-3 text-sm text-terracotta-800">
@@ -97,7 +134,7 @@ export function DeleteWorkspaceDialog({
               </button>
               <button
                 onClick={submit}
-                disabled={confirm !== workspaceName || status === "deleting"}
+                disabled={confirm !== workspaceName || status === "deleting" || !password || (needsTotp && !totp)}
                 className="inline-flex items-center gap-2 rounded-lg bg-terracotta-600 px-4 py-2 text-sm font-medium text-white hover:bg-terracotta-700 disabled:opacity-50"
               >
                 {status === "deleting" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
