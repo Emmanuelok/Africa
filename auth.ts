@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 
 import { getDb, schema } from "@/lib/db/client";
 import { verifyPassword, safeEqual } from "@/lib/auth/password";
+import { verifyTotpToken, consumeRecoveryCode } from "@/lib/auth/totp";
 import { magicLinkEmail } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/resend";
 
@@ -18,11 +19,13 @@ const providers: NextAuthConfig["providers"] = [
     name: "Email and password",
     credentials: {
       email: { label: "Email", type: "email" },
-      password: { label: "Password", type: "password" }
+      password: { label: "Password", type: "password" },
+      totp: { label: "2FA code", type: "text" }
     },
     async authorize(credentials) {
       const email = String(credentials?.email ?? "").trim().toLowerCase();
       const password = String(credentials?.password ?? "");
+      const totp = String(credentials?.totp ?? "").trim();
       if (!email || !password) return null;
 
       // 1. Real users from DB (when DATABASE_URL is set)
@@ -36,6 +39,29 @@ const providers: NextAuthConfig["providers"] = [
         if (user && "passwordHash" in user && typeof user.passwordHash === "string") {
           const ok = await verifyPassword(password, user.passwordHash as string);
           if (!ok) return null;
+
+          // TOTP gate when 2FA is enabled. Accept either a current 6-digit
+          // code from the authenticator app or a one-time recovery code.
+          if (user.totpEnabled) {
+            if (!totp) {
+              // Signal to the UI that a second factor is required. Auth.js
+              // surfaces thrown errors as the `error` query param on /signin.
+              throw new Error("2FA_REQUIRED");
+            }
+            const totpOk = user.totpSecret ? verifyTotpToken(totp, user.totpSecret) : false;
+            if (!totpOk && user.totpRecoveryCodes) {
+              const remaining = consumeRecoveryCode(totp, user.totpRecoveryCodes);
+              if (!remaining) return null;
+              // Recovery code consumed — persist the shortened list.
+              await db
+                .update(schema.users)
+                .set({ totpRecoveryCodes: remaining, updatedAt: new Date() })
+                .where(eq(schema.users.id, user.id));
+            } else if (!totpOk) {
+              return null;
+            }
+          }
+
           return { id: user.id, email: user.email, name: user.name ?? undefined, image: user.image ?? undefined };
         }
       }

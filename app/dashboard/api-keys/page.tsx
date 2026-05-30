@@ -25,6 +25,7 @@ export default async function ApiKeysPage() {
       name: r.name,
       prefix: r.prefix,
       maskedKey: `${r.prefix}••••••••••••${r.hashedKey.slice(-4)}`,
+      scopes: (r.scopes as string[]) ?? ["*"],
       lastUsedAt: r.lastUsedAt?.toISOString() ?? null,
       createdAt: r.createdAt.toISOString()
     }));

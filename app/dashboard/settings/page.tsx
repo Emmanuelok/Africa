@@ -85,6 +85,23 @@ export default async function SettingsPage() {
       </Card>
 
       <Card>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Security</h2>
+            <p className="mt-1 text-sm text-ink-600">
+              Two-factor authentication, active sessions, and account deletion.
+            </p>
+          </div>
+          <a
+            href="/dashboard/settings/security"
+            className="rounded-lg border border-ink-300 px-3 py-2 text-sm font-medium hover:bg-ink-50"
+          >
+            Manage →
+          </a>
+        </div>
+      </Card>
+
+      <Card>
         <h2 className="font-semibold">Danger zone</h2>
         <p className="mt-1 text-sm text-ink-600">Permanent actions. Cannot be undone.</p>
         <div className="mt-4 flex flex-wrap gap-2">

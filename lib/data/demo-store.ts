@@ -37,6 +37,7 @@ export type DemoApiKey = {
   name: string;
   prefix: string;
   maskedKey: string;
+  scopes?: string[];
   lastUsedAt: string | null;
   createdAt: string;
 };

@@ -6,6 +6,15 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import type { DemoApiKey } from "@/lib/data/demo-store";
 
+const AVAILABLE_SCOPES: Array<{ id: string; label: string }> = [
+  { id: "*", label: "Full access (all endpoints)" },
+  { id: "classify", label: "/v1/classify" },
+  { id: "determine-origin", label: "/v1/determine-origin" },
+  { id: "tariff", label: "/v1/tariff" },
+  { id: "certificates", label: "/v1/certificates" },
+  { id: "shipments", label: "/v1/shipments" }
+];
+
 export function ApiKeysManager({
   initial,
   isDemo
@@ -17,36 +26,52 @@ export function ApiKeysManager({
   const [creating, setCreating] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyEnv, setNewKeyEnv] = useState<"live" | "test">("test");
+  const [newKeyScopes, setNewKeyScopes] = useState<string[]>(["*"]);
   const [revealed, setRevealed] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function toggleScope(s: string) {
+    setNewKeyScopes((prev) => {
+      if (s === "*") return prev.includes("*") ? [] : ["*"];
+      const without = prev.filter((x) => x !== "*");
+      if (without.includes(s)) return without.filter((x) => x !== s);
+      return [...without, s];
+    });
+  }
+
   async function createKey() {
     if (!newKeyName.trim()) return;
+    if (newKeyScopes.length === 0) {
+      setError("Pick at least one scope.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newKeyName, env: newKeyEnv })
+        body: JSON.stringify({ name: newKeyName, env: newKeyEnv, scopes: newKeyScopes })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Failed to create key");
       setRevealed(data.plaintext);
       setKeys((prev) => [
         {
-          id: `key_${Math.random().toString(36).slice(2, 10)}`,
+          id: data.id ?? `key_${Math.random().toString(36).slice(2, 10)}`,
           name: newKeyName,
           prefix: data.prefix,
           maskedKey: `${data.prefix}••••••••••••${data.suffix}`,
+          scopes: data.scopes ?? newKeyScopes,
           lastUsedAt: null,
           createdAt: new Date().toISOString()
         },
         ...prev
       ]);
       setNewKeyName("");
+      setNewKeyScopes(["*"]);
       setCreating(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create key");
@@ -132,10 +157,29 @@ export function ApiKeysManager({
                 <option value="live">Live</option>
               </select>
             </div>
-            <div className="flex gap-2">
+            <div className="basis-full">
+              <label className="text-xs uppercase tracking-wide text-ink-500">Scopes</label>
+              <div className="mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2">
+                {AVAILABLE_SCOPES.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-sand-50">
+                    <input
+                      type="checkbox"
+                      checked={newKeyScopes.includes(s.id)}
+                      onChange={() => toggleScope(s.id)}
+                    />
+                    <code className="font-mono text-xs">{s.id}</code>
+                    <span className="text-xs text-ink-500">— {s.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-ink-500">
+                Use the narrowest set that works. Picking <code>*</code> grants full access and disables per-endpoint limits.
+              </p>
+            </div>
+            <div className="basis-full flex gap-2">
               <button
                 onClick={createKey}
-                disabled={!newKeyName.trim() || busy}
+                disabled={!newKeyName.trim() || busy || newKeyScopes.length === 0}
                 className="inline-flex items-center gap-2 rounded-lg bg-terracotta-600 px-4 py-2 text-sm font-medium text-white hover:bg-terracotta-700 disabled:opacity-60"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
@@ -170,6 +214,7 @@ export function ApiKeysManager({
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Key</th>
               <th className="px-4 py-3">Env</th>
+              <th className="px-4 py-3">Scopes</th>
               <th className="px-4 py-3">Last used</th>
               <th className="px-4 py-3">Created</th>
               <th className="px-4 py-3"></th>
@@ -182,6 +227,13 @@ export function ApiKeysManager({
                 <td className="px-4 py-3 font-mono text-xs text-ink-600">{k.maskedKey}</td>
                 <td className="px-4 py-3">
                   {k.prefix === "sk_live_" ? <Badge tone="terracotta">Live</Badge> : <Badge tone="neutral">Test</Badge>}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {(k.scopes ?? ["*"]).map((s) => (
+                      <code key={s} className="rounded bg-ink-100 px-1.5 py-0.5 text-[10px] font-mono">{s}</code>
+                    ))}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-xs text-ink-600">
                   {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString() : "Never"}
@@ -203,7 +255,7 @@ export function ApiKeysManager({
             ))}
             {keys.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-ink-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-ink-500">
                   No API keys yet.
                 </td>
               </tr>

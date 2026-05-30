@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const t0 = Date.now();
-  const auth = await authenticateApiKey(req);
+  const auth = await authenticateApiKey(req, "determine-origin");
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {

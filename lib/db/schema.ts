@@ -21,6 +21,10 @@ export const users = pgTable("users", {
   image: text("image"),
   emailVerified: timestamp("email_verified"),
   passwordHash: text("password_hash"),
+  // TOTP 2FA
+  totpSecret: text("totp_secret"),
+  totpEnabled: boolean("totp_enabled").notNull().default(false),
+  totpRecoveryCodes: jsonb("totp_recovery_codes").$type<string[]>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
@@ -195,6 +199,9 @@ export const apiKeys = pgTable("api_keys", {
   name: text("name").notNull(),
   hashedKey: text("hashed_key").notNull(),
   prefix: text("prefix").notNull(), // sk_live_, sk_test_
+  // Per-endpoint scopes: ["*"] = full access. Names match the v1 endpoint
+  // path segments: classify, determine-origin, tariff, certificates, shipments.
+  scopes: jsonb("scopes").$type<string[]>().notNull().default(["*"]),
   lastUsedAt: timestamp("last_used_at"),
   revokedAt: timestamp("revoked_at"),
   createdAt: timestamp("created_at").defaultNow().notNull()

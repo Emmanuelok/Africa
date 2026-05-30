@@ -13,6 +13,23 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.21.0",
+    type: "feature",
+    title: "TOTP 2FA + recovery codes, session management, user delete (GDPR), API key scoping",
+    bullets: [
+      "TOTP 2FA enrollment: scan QR or paste secret into any authenticator (1Password / Authy / Aegis), confirm a 6-digit code, receive 8 one-time recovery codes (SHA-256 hashed at rest)",
+      "Auth.js Credentials provider now gates sign-in on a TOTP code (or recovery code) when 2FA is enabled — throws 2FA_REQUIRED to the UI, which reveals a code field without re-asking for password",
+      "Working /signin page replaces the static stub — calls signIn() with credentials, handles 2FA challenge, surfaces error states",
+      "/dashboard/settings/security: enroll/disable 2FA, regenerate recovery codes (all require password re-auth)",
+      "Session management: GET/DELETE /api/auth/sessions lists active sessions, revokes individual or all (except current). SessionsManager shows session fingerprints + expiry",
+      "DELETE /api/users/me — GDPR right to erasure with password + TOTP re-auth, name-match 'DELETE' confirmation, blocks if user is sole owner of a workspace with other members, cancels Stripe subs and clears Blob PDFs for orphan workspaces before user delete",
+      "DeleteAccountDialog wired into /dashboard/settings/security danger zone",
+      "API key scoping: keys store a scopes[] array. authenticateApiKey takes a required scope; v1 endpoints declare their scope (classify/determine-origin/tariff/certificates/shipments). Returns 403 with helpful message on scope mismatch. UI scope-picker checkboxes + table column added",
+      "/api/keys enforces apiKeysMax plan quota; audit-logs creation"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.20.0",
     type: "feature",
     title: "Production hardening: real auth gating, password reset, email verify, quotas, idempotency, webhook retries, health check",
