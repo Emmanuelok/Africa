@@ -95,7 +95,17 @@ function getIndex(): SearchResult[] {
   return cached;
 }
 
-// Simple substring + token scoring. Plenty for an ~200-doc corpus.
+// Substring + token + fuzzy scoring. Plenty for an ~200-doc corpus.
+// Tokens missing from haystack are forgiven once per query when their best
+// Levenshtein distance to any haystack word is within the allowed budget —
+// protects against typos and transpositions like "afctfa" or "orign".
+function maxAllowedEdits(tokenLen: number): number {
+  if (tokenLen <= 3) return 0;
+  if (tokenLen <= 5) return 1;
+  if (tokenLen <= 8) return 2;
+  return 3;
+}
+
 export function search(query: string, limit = 12): SearchResult[] {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
@@ -105,21 +115,75 @@ export function search(query: string, limit = 12): SearchResult[] {
   const results: Array<SearchResult & { score: number }> = [];
 
   for (const item of idx) {
-    const hay = `${item.title} ${item.description}`.toLowerCase();
+    const titleLc = item.title.toLowerCase();
+    const descLc = item.description.toLowerCase();
+    const hay = `${titleLc} ${descLc}`;
+    const hayWords = hay.split(/[\s.,/():?"]+/).filter(Boolean);
     let score = 0;
+    let fuzzyMissesUsed = 0;
+    let dropped = false;
+
     for (const tok of tokens) {
-      if (item.title.toLowerCase() === tok) score += 100;
-      if (item.title.toLowerCase().startsWith(tok)) score += 30;
-      if (item.title.toLowerCase().includes(tok)) score += 15;
-      if (item.description.toLowerCase().includes(tok)) score += 5;
-      if (!hay.includes(tok)) {
-        score = -1;
+      const exact = hay.includes(tok);
+      if (titleLc === tok) score += 100;
+      if (titleLc.startsWith(tok)) score += 30;
+      if (titleLc.includes(tok)) score += 15;
+      if (descLc.includes(tok)) score += 5;
+
+      if (!exact) {
+        // One fuzzy miss per query allowed: nearest haystack word within
+        // a length-scaled Levenshtein budget.
+        if (fuzzyMissesUsed === 0 && tok.length >= 3) {
+          const budget = maxAllowedEdits(tok.length);
+          const matched = hayWords.some((w) => {
+            if (!w || Math.abs(w.length - tok.length) > budget) return false;
+            return levenshtein(tok, w, budget) <= budget;
+          });
+          if (matched) {
+            score += 8;
+            fuzzyMissesUsed += 1;
+            continue;
+          }
+        }
+        dropped = true;
         break;
       }
     }
-    if (score > 0) results.push({ ...item, score });
+
+    if (!dropped && score > 0) results.push({ ...item, score });
   }
 
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, limit);
+}
+
+// Standard Levenshtein with early exit when the current row's minimum exceeds
+// the budget. O(a*b) worst case but the bail-out keeps fuzzy search cheap.
+function levenshtein(a: string, b: string, budget: number): number {
+  if (a === b) return 0;
+  const al = a.length;
+  const bl = b.length;
+  if (Math.abs(al - bl) > budget) return budget + 1;
+
+  let prev = new Array(bl + 1);
+  let curr = new Array(bl + 1);
+  for (let j = 0; j <= bl; j++) prev[j] = j;
+
+  for (let i = 1; i <= al; i++) {
+    curr[0] = i;
+    let rowMin = i;
+    for (let j = 1; j <= bl; j++) {
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      curr[j] = Math.min(
+        curr[j - 1] + 1,
+        prev[j] + 1,
+        prev[j - 1] + cost
+      );
+      if (curr[j] < rowMin) rowMin = curr[j];
+    }
+    if (rowMin > budget) return budget + 1;
+    [prev, curr] = [curr, prev];
+  }
+
+  return prev[bl];
 }

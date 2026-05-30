@@ -13,6 +13,19 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.19.0",
+    type: "feature",
+    title: "Landing hero translation, fuzzy search, mobile dashboard search",
+    bullets: [
+      "Landing-page hero (eyebrow, title, body, CTAs, trust bullets) and the wizard-preview card now pull from the locale dictionary in all 5 languages — flips live when the LocaleSwitcher cookie changes",
+      "Fuzzy search uses Levenshtein distance with a length-scaled edit budget (≤3: 0 edits, 4-5: 1, 6-8: 2, longer: 3) — one fuzzy miss per query allowed, so 'afctfa' finds AfCFTA and 'orign' finds Rules of Origin",
+      "Early-exit Levenshtein DP with row-min budget check keeps fuzzy search cheap on the ~200-doc corpus",
+      "Mobile dashboard topbar gains the ⌘K SearchDialog trigger alongside the notifications bell",
+      "Search test suite extended to cover typo-tolerance paths (71/71 green)"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.18.0",
     type: "feature",
     title: "Test suite, weekly email digest, audit log filtering",

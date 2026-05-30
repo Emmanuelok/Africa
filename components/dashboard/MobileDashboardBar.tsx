@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
 import { WorkspaceSwitcher } from "@/components/dashboard/WorkspaceSwitcher";
+import { SearchDialog } from "@/components/SearchDialog";
 import type { WorkspaceSummary } from "@/lib/server/workspace";
 
 const NAV = [
@@ -73,6 +74,7 @@ export function MobileDashboardBar({
             </div>
           )}
         </div>
+        <SearchDialog />
         <NotificationsBell />
       </div>
 

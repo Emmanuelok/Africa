@@ -42,4 +42,16 @@ describe("search", () => {
       expect(first).toHaveProperty("kind");
     }
   });
+
+  it("fuzzy match catches a typo on a known title token", () => {
+    // "afctfa" → afcfta. Should still surface the concept doc.
+    const results = search("afctfa");
+    expect(results.length).toBeGreaterThan(0);
+  });
+
+  it("fuzzy match catches a typo in a multi-word query", () => {
+    // "rules of orign" with the typo on 'origin' should still match.
+    const results = search("rules of orign");
+    expect(results.some((r) => r.title.toLowerCase().includes("rules of origin"))).toBe(true);
+  });
 });

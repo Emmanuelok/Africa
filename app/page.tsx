@@ -21,8 +21,11 @@ import { Card } from "@/components/ui/Card";
 import { CommodityTicker } from "@/components/CommodityTicker";
 import { TradeOSDiagram } from "@/components/TradeOSDiagram";
 import { WaitlistForm } from "@/components/WaitlistForm";
+import { getServerLocale } from "@/lib/i18n/cookie";
+import { t } from "@/lib/i18n/locales";
 
 export default function HomePage() {
+  const locale = getServerLocale();
   return (
     <>
       {/* HERO — AfriOrigin first */}
@@ -31,29 +34,27 @@ export default function HomePage() {
           <div className="grid items-center gap-12 md:grid-cols-2">
             <div className="animate-fade-up">
               <Badge tone="terracotta" className="mb-5">
-                <Sparkles className="h-3 w-3" /> AfriOrigin — AfCFTA compliance in seconds
+                <Sparkles className="h-3 w-3" /> {t(locale, "hero.eyebrow")}
               </Badge>
               <h1 className="font-display text-4xl font-semibold tracking-tight text-ink-900 md:text-6xl">
-                Stop paying <span className="text-terracotta-600">$300/shipment</span> to figure out
-                AfCFTA.
+                {t(locale, "hero.title.a")}{" "}
+                <span className="text-terracotta-600">{t(locale, "hero.title.b")}</span>
               </h1>
               <p className="mt-6 max-w-xl text-lg text-ink-700">
-                Tell us what you&apos;re shipping. AfriOrigin classifies the HS code, checks the
-                Rules of Origin, calculates your tariff savings, and generates a customs-ready
-                Certificate of Origin — in <strong>60 seconds</strong>, in <strong>5 languages</strong>.
+                {t(locale, "hero.body")}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button href="/afriorigin" size="lg">
-                  Run a free determination <ArrowRight className="h-4 w-4" />
+                  {t(locale, "hero.cta.primary")} <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button href="/pricing" size="lg" variant="outline">
-                  See pricing
+                  {t(locale, "hero.cta.secondary")}
                 </Button>
               </div>
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-600">
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-savanna-600" /> No card required</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-savanna-600" /> 1 determination free / month</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-savanna-600" /> 25 countries supported</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-savanna-600" /> {t(locale, "hero.no_card")}</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-savanna-600" /> {t(locale, "hero.free_monthly")}</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-savanna-600" /> {t(locale, "hero.countries")}</span>
               </div>
             </div>
 
@@ -61,28 +62,28 @@ export default function HomePage() {
             <div className="relative animate-fade-in">
               <div className="rounded-3xl border border-ink-200 bg-white p-6 shadow-xl">
                 <div className="flex items-center justify-between text-xs uppercase tracking-wide text-ink-500">
-                  <span>Step 3 of 3 · Result</span>
-                  <Badge tone="success"><CheckCircle2 className="h-3 w-3" /> Qualifies</Badge>
+                  <span>{t(locale, "hero.preview.step")}</span>
+                  <Badge tone="success"><CheckCircle2 className="h-3 w-3" /> {t(locale, "hero.preview.qualifies")}</Badge>
                 </div>
                 <div className="mt-3">
-                  <div className="text-xs text-ink-500">Trade lane</div>
+                  <div className="text-xs text-ink-500">{t(locale, "hero.preview.lane")}</div>
                   <div className="text-sm font-semibold">🇰🇪 Kenya → 🇳🇬 Nigeria</div>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm">
                   <Row k="HS code" v="0901.11" mono />
-                  <Row k="Product" v="Arabica green coffee, AA grade" />
-                  <Row k="Rule applied" v="Wholly Obtained (Art. 5)" />
-                  <Row k="MFN duty" v="$1,162" strike />
-                  <Row k="AfCFTA duty" v="$232" highlight />
+                  <Row k={t(locale, "hero.preview.product")} v="Arabica green coffee, AA grade" />
+                  <Row k={t(locale, "hero.preview.rule")} v="Wholly Obtained (Art. 5)" />
+                  <Row k={t(locale, "hero.preview.mfn")} v="$1,162" strike />
+                  <Row k={t(locale, "hero.preview.afcfta")} v="$232" highlight />
                 </div>
                 <div className="mt-5 rounded-xl bg-savanna-50 p-4 text-center">
-                  <div className="text-xs uppercase tracking-wide text-savanna-700">You save</div>
+                  <div className="text-xs uppercase tracking-wide text-savanna-700">{t(locale, "hero.preview.you_save")}</div>
                   <div className="font-display text-3xl font-semibold text-savanna-900">$930</div>
                   <div className="text-xs text-savanna-700">on a $9,300 shipment · 10.0%</div>
                 </div>
                 <div className="mt-4 flex gap-2">
                   <div className="flex-1 rounded-lg border border-ink-200 px-3 py-2 text-xs text-ink-700">
-                    📄 Certificate of Origin ready
+                    📄 {t(locale, "hero.preview.cert_ready")}
                   </div>
                 </div>
               </div>
