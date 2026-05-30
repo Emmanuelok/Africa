@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Auth.js session cookie names (dev + prod variants for both v4 and v5).
 const SESSION_COOKIES = [
   "authjs.session-token",
   "__Secure-authjs.session-token",
@@ -15,9 +14,6 @@ const SECURITY_HEADERS: Array<[string, string]> = [
   ["Permissions-Policy", "camera=(), microphone=(), geolocation=()"]
 ];
 
-// Dashboard is auth-only when NEXTAUTH_SECRET is configured. Without it,
-// the app stays in demo mode (so the marketing site works without a DB),
-// matching the rest of the graceful-degradation pattern.
 const PROTECTED_PREFIXES = ["/dashboard"];
 
 function hasSession(req: NextRequest): boolean {
@@ -27,9 +23,31 @@ function hasSession(req: NextRequest): boolean {
   return false;
 }
 
+// Stable per-request id. We use crypto.randomUUID where available; the edge
+// runtime has it natively in modern Vercel deploys.
+function newRequestId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+}
+
 export function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+  // Per-request id: honour an incoming X-Request-Id when present (handy when
+  // upstream load balancers / CDNs already assign one), otherwise mint our
+  // own. We forward it on the inbound request so server handlers can read it
+  // via headers(), and surface it on the response so logs in the user's
+  // browser dev-tools can be correlated with server logs.
+  const incoming = req.headers.get("x-request-id");
+  const requestId = incoming ?? newRequestId();
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-request-id", requestId);
+
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
   for (const [k, v] of SECURITY_HEADERS) res.headers.set(k, v);
+  res.headers.set("X-Request-Id", requestId);
 
   if (!process.env.NEXTAUTH_SECRET) return res;
 

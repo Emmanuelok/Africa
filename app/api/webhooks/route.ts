@@ -1,34 +1,46 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db/client";
 import { getSessionUser } from "@/lib/server/session";
 import { generateSecret } from "@/lib/webhooks/dispatch";
 import { WEBHOOK_EVENTS } from "@/lib/webhooks/events";
 import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
+import { getIdempotent, rememberIdempotent, readIdempotencyKey } from "@/lib/server/idempotency";
+import { checkQuota } from "@/lib/server/quota";
+import { logFor } from "@/lib/log";
 
 export const runtime = "nodejs";
 
-const URL_RE = /^https:\/\//; // require HTTPS
+const Body = z.object({
+  url: z.string().url().refine((u) => u.startsWith("https://"), { message: "URL must use https://" }),
+  description: z.string().max(200).optional().nullable(),
+  events: z.array(z.enum(WEBHOOK_EVENTS)).default([])
+});
 
 export async function POST(req: Request) {
+  const logger = logFor(req, { route: "/api/webhooks" });
   try {
     const user = await getSessionUser();
-    const body = await req.json();
-    const url = String(body?.url ?? "").trim();
-    const description = String(body?.description ?? "").trim().slice(0, 200) || null;
-    const events: string[] = Array.isArray(body?.events) ? body.events.filter((e: unknown) => typeof e === "string") : [];
 
-    if (!URL_RE.test(url)) {
-      return NextResponse.json({ error: "URL must use https://" }, { status: 400 });
+    const idem = readIdempotencyKey(req);
+    if (idem) {
+      const prev = await getIdempotent(`wh:${user.workspaceId}`, idem);
+      if (prev) return NextResponse.json(prev.body, { status: prev.status });
     }
-    if (events.length > 0) {
-      const invalid = events.filter((e) => !WEBHOOK_EVENTS.includes(e as (typeof WEBHOOK_EVENTS)[number]));
-      if (invalid.length > 0) {
-        return NextResponse.json(
-          { error: `Unknown events: ${invalid.join(", ")}. Allowed: ${WEBHOOK_EVENTS.join(", ")}` },
-          { status: 400 }
-        );
-      }
+
+    const json = await req.json().catch(() => ({}));
+    const parsed = Body.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+    }
+    const url = parsed.data.url.trim();
+    const description = parsed.data.description?.trim().slice(0, 200) || null;
+    const events = parsed.data.events;
+
+    const q = await checkQuota(user.workspaceId, user.plan, "webhookEndpointsMax");
+    if (!q.ok) {
+      return NextResponse.json({ error: q.reason, used: q.used, limit: q.limit, code: "quota_exceeded" }, { status: 402 });
     }
 
     const secret = generateSecret();
@@ -56,12 +68,14 @@ export async function POST(req: Request) {
         ipAddress,
         userAgent
       });
+      logger.info({ workspaceId: user.workspaceId, endpointId: inserted[0].id, url, events }, "webhook endpoint created");
     }
 
-    // Secret returned once. Customers store it for verifying signatures.
-    return NextResponse.json({ ok: true, secret, url, events, isDemo: user.isDemo });
+    const response = { ok: true, secret, url, events, isDemo: user.isDemo };
+    if (idem) await rememberIdempotent(`wh:${user.workspaceId}`, idem, { status: 200, body: response });
+    return NextResponse.json(response);
   } catch (err) {
-    console.error("[/api/webhooks POST]", err);
+    logger.error({ err }, "webhook endpoint create failed");
     return NextResponse.json({ error: "Could not create webhook" }, { status: 500 });
   }
 }

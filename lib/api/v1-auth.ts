@@ -1,6 +1,7 @@
 import { eq, and, isNull } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db/client";
 import { extractKey, sha256, safeHashEqual } from "@/lib/api/keys";
+import { log } from "@/lib/log";
 
 export const API_SCOPES = ["classify", "determine-origin", "tariff", "certificates", "shipments"] as const;
 export type ApiScope = (typeof API_SCOPES)[number];
@@ -97,5 +98,5 @@ export function recordUsage(opts: {
       statusCode: opts.statusCode,
       durationMs: opts.durationMs
     })
-    .catch((err) => console.warn("[api:usage] insert failed:", err));
+    .catch((err) => log.warn({ err, apiKeyId: opts.apiKeyId, endpoint: opts.endpoint }, "api usage insert failed"));
 }

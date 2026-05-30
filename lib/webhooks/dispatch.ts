@@ -1,6 +1,7 @@
 import { createHmac, randomBytes } from "crypto";
 import { eq, and } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db/client";
+import { log } from "@/lib/log";
 import type { WebhookEvent, WebhookPayload } from "./events";
 
 const SIGNATURE_HEADER = "Sokoni-Signature";
@@ -102,7 +103,7 @@ async function deliverOnce(
     succeeded,
     attempts,
     nextRetryAt: succeeded || attempts >= 6 ? null : retryAfter(attempts)
-  }).catch((err) => console.warn("[webhooks] delivery insert failed:", err));
+  }).catch((err) => log.warn({ err, endpointId: endpoint.id, event: payload.type }, "webhook delivery insert failed"));
 
   // Clear the pending retry on the original row so the cron doesn't keep
   // picking it up.

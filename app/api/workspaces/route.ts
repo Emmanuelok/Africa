@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { cookies } from "next/headers";
 import { getDb, schema } from "@/lib/db/client";
 import { getSessionUser } from "@/lib/server/session";
 import { ACTIVE_WORKSPACE_COOKIE } from "@/lib/server/workspace";
 import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
+import { getIdempotent, rememberIdempotent, readIdempotencyKey } from "@/lib/server/idempotency";
+import { logFor } from "@/lib/log";
 
 export const runtime = "nodejs";
 
+const Body = z.object({
+  name: z.string().min(2).max(120),
+  country: z.string().length(2).optional().nullable()
+});
+
 export async function POST(req: Request) {
+  const logger = logFor(req, { route: "/api/workspaces" });
   const user = await getSessionUser();
   if (user.isDemo) {
     return NextResponse.json(
@@ -24,13 +33,19 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json();
-  const name = String(body?.name ?? "").trim().slice(0, 120);
-  const country = body?.country ? String(body.country).toUpperCase().slice(0, 2) : null;
-
-  if (name.length < 2) {
-    return NextResponse.json({ error: "name must be at least 2 characters" }, { status: 400 });
+  const idem = readIdempotencyKey(req);
+  if (idem) {
+    const prev = await getIdempotent(`ws:${user.id}`, idem);
+    if (prev) return NextResponse.json(prev.body, { status: prev.status });
   }
+
+  const json = await req.json().catch(() => ({}));
+  const parsed = Body.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+  }
+  const name = parsed.data.name.trim();
+  const country = parsed.data.country ? parsed.data.country.toUpperCase() : null;
 
   const created = await db
     .insert(schema.workspaces)
@@ -43,7 +58,6 @@ export async function POST(req: Request) {
     role: "owner"
   });
 
-  // Switch to the new workspace immediately.
   cookies().set(ACTIVE_WORKSPACE_COOKIE, created[0].id, {
     httpOnly: false,
     sameSite: "lax",
@@ -55,12 +69,16 @@ export async function POST(req: Request) {
   audit({
     workspaceId: created[0].id,
     userId: user.id,
-    action: "workspace.member_invited", // closest existing; treat creation as "owner joined"
+    action: "workspace.member_invited",
     target: created[0].id,
     metadata: { event: "workspace_created", name },
     ipAddress,
     userAgent
   });
 
-  return NextResponse.json({ ok: true, id: created[0].id, name: created[0].name });
+  logger.info({ workspaceId: created[0].id, name }, "workspace created");
+
+  const response = { ok: true, id: created[0].id, name: created[0].name };
+  if (idem) await rememberIdempotent(`ws:${user.id}`, idem, { status: 200, body: response });
+  return NextResponse.json(response);
 }

@@ -4,6 +4,7 @@ import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/rat
 import { verifyTurnstile } from "@/lib/captcha/turnstile";
 import { sendEmail } from "@/lib/email/resend";
 import { waitlistConfirmationEmail } from "@/lib/email/templates";
+import { logFor } from "@/lib/log";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Captcha verification failed. Refresh and try again." }, { status: 400, headers });
     }
 
+    const logger = logFor(req, { route: "/api/waitlist", source });
     const db = getDb();
     if (db) {
       try {
@@ -45,11 +47,11 @@ export async function POST(req: Request) {
           .values({ email, company, country, source })
           .onConflictDoNothing();
       } catch (err) {
-        console.error("[waitlist] db insert failed:", err);
+        logger.error({ err }, "waitlist db insert failed");
       }
     }
 
-    console.log("[waitlist]", { email, company, country, source, persisted: !!db });
+    logger.info({ email, company, country, persisted: !!db }, "waitlist signup");
 
     // Confirmation email — fire and forget.
     const tpl = waitlistConfirmationEmail({ email });
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
       { headers }
     );
   } catch (err) {
-    console.error("[/api/waitlist]", err);
+    logFor(req, { route: "/api/waitlist" }).error({ err }, "waitlist handler failed");
     return NextResponse.json({ error: "Could not process your request." }, { status: 500, headers });
   }
 }

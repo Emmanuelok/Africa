@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { getDb, schema } from "@/lib/db/client";
+import { log } from "@/lib/log";
 import { putCertificatePdf } from "@/lib/blob/store";
 import {
   DEMO_DETERMINATIONS,
@@ -178,7 +179,7 @@ export async function saveCertificate(input: SaveCertificateInput): Promise<{ id
           .where(eq(schema.certificates.id, rows[0].id));
       }
     } catch (err) {
-      console.warn("[certificates] background PDF render failed:", err);
+      log.warn({ err, reference }, "background PDF render failed");
     }
   })();
 

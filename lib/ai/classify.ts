@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { getAnthropic, ANTHROPIC_MODEL } from "@/lib/ai/anthropic";
 import { classifyProduct, type Classification } from "@/lib/data/classifier";
+import { log } from "@/lib/log";
 import { lookupTariff } from "@/lib/data/tariffs";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
@@ -103,7 +104,7 @@ export async function classifyWithAI(description: string): Promise<Classificatio
       source: "ai"
     };
   } catch (err) {
-    console.warn("[ai/classify] AI call failed, falling back to keyword:", err);
+    log.warn({ err }, "AI classify failed; falling back to keyword");
     const result = classifyProduct(description);
     return { ...result, source: "keyword" };
   }
@@ -142,7 +143,7 @@ export async function explainOriginWithAI(input: {
       .join("");
     return text.trim();
   } catch (err) {
-    console.warn("[ai/explainOrigin] failed:", err);
+    log.warn({ err }, "AI explainOrigin failed");
     return null;
   }
 }

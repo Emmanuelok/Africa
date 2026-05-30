@@ -1,5 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db/client";
+import { log } from "@/lib/log";
 import { NOTIFICATION_KINDS, type NotificationKind } from "@/lib/notifications/kinds";
 import { sendEmail } from "@/lib/email/resend";
 import { cacheGet, cacheSet } from "@/lib/cache";
@@ -85,7 +86,7 @@ export function notify(input: NotifyInput): void {
         }
       }
     } catch (err) {
-      console.warn("[notify] failed:", err);
+      log.warn({ err, kind: input.kind, userId: input.userId, workspaceId: input.workspaceId }, "notify failed");
     }
   })();
 }

@@ -1,4 +1,5 @@
 import { getDb, schema } from "@/lib/db/client";
+import { log } from "@/lib/log";
 
 export type AuditAction =
   | "determination.created"
@@ -45,7 +46,7 @@ export function audit(input: AuditInput): void {
       ipAddress: input.ipAddress ?? null,
       userAgent: input.userAgent ?? null
     })
-    .catch((err) => console.warn("[audit] insert failed:", err));
+    .catch((err) => log.warn({ err, action: input.action }, "audit insert failed"));
 }
 
 export function ipAndUaFromRequest(req: Request): { ipAddress: string | null; userAgent: string | null } {

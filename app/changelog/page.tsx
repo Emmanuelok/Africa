@@ -13,6 +13,22 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.23.0",
+    type: "feature",
+    title: "Structured logging, request IDs, idempotency on writes, more Stripe events, post-delete page",
+    bullets: [
+      "Pino-based structured logger (lib/log.ts) with redaction of password / token / cookie fields, JSON in production and pino-pretty in dev",
+      "Request ID middleware: forwards incoming X-Request-Id when present, mints a UUID otherwise, surfaces it on the response header AND on the inbound request so handlers' child loggers can correlate every line",
+      "logFor(req, …) helper produces a per-request child logger with method, path, requestId, and any caller-supplied context; replaces console.log in waitlist, v1-auth, dispatch, audit, notify, classify, determinations",
+      "Idempotency-Key header now honoured on POST /api/workspaces, POST /api/team/invitations, POST /api/webhooks — same key in a 24h window returns the cached response instead of duplicating side effects",
+      "Zod validation added to those same three endpoints (URL must be https for webhooks; events constrained to the WEBHOOK_EVENTS enum)",
+      "Webhook endpoint creation now enforces the webhookEndpointsMax plan quota",
+      "Stripe webhook handles customer.subscription.trial_will_end (3-day in-product reminder), invoice.payment_action_required (3DS/SCA challenge nudge with hosted-invoice link), customer.updated (observability)",
+      "/account-deleted page renders after a successful DELETE /api/users/me — explains what was removed, retention obligations, and the path back"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.22.0",
     type: "feature",
     title: "Anthropic prompt caching, Resend bounce handling, OpenAPI spec, re-auth on workspace delete, email change",

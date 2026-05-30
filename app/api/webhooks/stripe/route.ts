@@ -160,6 +160,68 @@ export async function POST(req: Request) {
       break;
     }
 
+    case "customer.subscription.trial_will_end": {
+      // 3 days before a trial ends. Friendly nudge so they aren't surprised
+      // by the first invoice.
+      const sub = event.data.object as Stripe.Subscription;
+      const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+      if (db) {
+        const wsRows = await db
+          .select()
+          .from(schema.workspaces)
+          .where(eq(schema.workspaces.stripeCustomerId, customerId))
+          .limit(1);
+        const ws = wsRows[0];
+        if (ws) {
+          notify({
+            workspaceId: ws.id,
+            kind: "billing.upgraded",
+            title: "Trial ending in 3 days",
+            body: "Your Sokoni trial converts to a paid plan in 3 days. Update payment details or cancel from the billing portal.",
+            target: "/dashboard/billing"
+          });
+        }
+      }
+      break;
+    }
+
+    case "invoice.payment_action_required": {
+      // 3DS / SCA challenge needed. We tell the customer in-product and let
+      // Stripe handle the actual auth via the hosted invoice URL.
+      const inv = event.data.object as Stripe.Invoice;
+      const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id ?? null;
+      if (db && customerId) {
+        const wsRows = await db
+          .select()
+          .from(schema.workspaces)
+          .where(eq(schema.workspaces.stripeCustomerId, customerId))
+          .limit(1);
+        const ws = wsRows[0];
+        if (ws) {
+          notify({
+            workspaceId: ws.id,
+            kind: "billing.payment_failed",
+            title: "Bank confirmation needed",
+            body: `Your card issuer requires a 3-D Secure step. Authorise the payment to keep your plan active.${inv.hosted_invoice_url ? "" : ""}`,
+            target: inv.hosted_invoice_url ?? "/dashboard/billing"
+          });
+        }
+      }
+      break;
+    }
+
+    case "customer.updated": {
+      // Email change in Stripe → mirror it on the workspace contact. Doesn't
+      // change the user's sign-in email; that's a separate user-side flow.
+      const cust = event.data.object as Stripe.Customer;
+      if (db && cust.id) {
+        // No-op for now: we don't store a workspace contact email. Logged for
+        // observability when this changes.
+        console.log("[stripe] customer.updated", { id: cust.id, email: cust.email });
+      }
+      break;
+    }
+
     default:
       break;
   }

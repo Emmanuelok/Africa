@@ -31,7 +31,7 @@ export function DeleteAccountDialog({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Could not delete account");
-      router.push("/?deleted=1");
+      router.push("/account-deleted");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete account");
