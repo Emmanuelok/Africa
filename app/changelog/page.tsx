@@ -13,6 +13,19 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.18.0",
+    type: "feature",
+    title: "Test suite, weekly email digest, audit log filtering",
+    bullets: [
+      "Vitest test suite: 69 tests across classifier, RoO engine, API key generation, search, i18n, password hashing, webhook signing, cert references, and workspace selection",
+      "npm test / test:watch / test:coverage scripts added",
+      "Weekly email digest cron (Mondays 06:00 UTC) — per-workspace 7-day summary of determinations, certificates, and AfCFTA savings emailed to members; skips silent workspaces",
+      "Notification email cooldown (15 min per user × kind via Upstash cache) so burst events collapse to one email while the in-product feed keeps every item",
+      "Audit log filter UI: full-text search across action/actor/target/metadata plus category chips (determinations, certificates, webhooks, billing, etc.), live result count"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.17.0",
     type: "feature",
     title: "Workspace delete + export, real Stripe subscription details",

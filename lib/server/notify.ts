@@ -1,7 +1,13 @@
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db/client";
 import { NOTIFICATION_KINDS, type NotificationKind } from "@/lib/notifications/kinds";
 import { sendEmail } from "@/lib/email/resend";
+import { cacheGet, cacheSet } from "@/lib/cache";
+
+// Per-(user,kind) email cooldown in seconds. Bursty events (many shipments
+// classified at once) collapse into a single email; the in-product feed still
+// gets every item.
+const EMAIL_COOLDOWN_SECONDS = 15 * 60;
 
 export type { NotificationKind } from "@/lib/notifications/kinds";
 
@@ -56,19 +62,26 @@ export function notify(input: NotifyInput): void {
       }
 
       if (deliverEmail && input.userId) {
-        const rows = await db
-          .select({ email: schema.users.email })
-          .from(schema.users)
-          .where(eq(schema.users.id, input.userId))
-          .limit(1);
-        const email = rows[0]?.email;
-        if (email) {
-          void sendEmail({
-            to: email,
-            subject: `[Sokoni] ${input.title}`,
-            html: emailHtml(input),
-            text: `${input.title}\n\n${input.body ?? ""}\n\nView: https://sokoni.africa${input.target ?? "/dashboard"}`
-          });
+        // Cooldown — skip the email (but keep in-product) if we emailed this
+        // user about this kind within the window.
+        const cooldownKey = `email-cooldown:${input.userId}:${input.kind}`;
+        const recentlyEmailed = await cacheGet<number>(cooldownKey);
+        if (!recentlyEmailed) {
+          const rows = await db
+            .select({ email: schema.users.email })
+            .from(schema.users)
+            .where(eq(schema.users.id, input.userId))
+            .limit(1);
+          const email = rows[0]?.email;
+          if (email) {
+            void sendEmail({
+              to: email,
+              subject: `[Sokoni] ${input.title}`,
+              html: emailHtml(input),
+              text: `${input.title}\n\n${input.body ?? ""}\n\nView: https://sokoni.africa${input.target ?? "/dashboard"}`
+            });
+            await cacheSet(cooldownKey, Date.now(), EMAIL_COOLDOWN_SECONDS);
+          }
         }
       }
     } catch (err) {
