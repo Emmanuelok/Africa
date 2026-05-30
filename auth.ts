@@ -9,6 +9,7 @@ import { verifyPassword, safeEqual } from "@/lib/auth/password";
 import { verifyTotpToken, consumeRecoveryCode } from "@/lib/auth/totp";
 import { magicLinkEmail } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/resend";
+import { rateLimit } from "@/lib/ratelimit";
 
 const db = getDb();
 const resendKey = process.env.RESEND_API_KEY;
@@ -27,6 +28,16 @@ const providers: NextAuthConfig["providers"] = [
       const password = String(credentials?.password ?? "");
       const totp = String(credentials?.totp ?? "").trim();
       if (!email || !password) return null;
+
+      // Brute-force defence — bucket by email so a slow attacker can't
+      // spread guesses across thousands of accounts. 10 attempts / 5 min.
+      // Returns success=true (no-op) when Upstash isn't configured, which
+      // is the right behaviour for local dev.
+      const rl = await rateLimit(`auth:${email}`, "checkout");
+      if (!rl.success) {
+        // Signal to the UI so SigninForm can show a useful message.
+        throw new Error("RATE_LIMITED");
+      }
 
       // 1. Real users from DB (when DATABASE_URL is set)
       if (db) {

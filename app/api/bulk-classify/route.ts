@@ -1,41 +1,26 @@
 import { NextResponse } from "next/server";
-import Papa from "papaparse";
-import { classifyWithAI } from "@/lib/ai/classify";
-import { determineOrigin } from "@/lib/data/classifier";
+import { z } from "zod";
+import { eq, desc } from "drizzle-orm";
+import { getDb, schema } from "@/lib/db/client";
 import { getSessionUser } from "@/lib/server/session";
-import { saveDetermination } from "@/lib/data/determinations";
+import {
+  parseCsv,
+  processRows,
+  PLAN_BULK_LIMITS,
+  ASYNC_THRESHOLD_ROWS
+} from "@/lib/data/bulk";
 import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/ratelimit";
+import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
+import { isQstashConfigured, enqueue } from "@/lib/queue/qstash";
+import { logFor } from "@/lib/log";
 
 export const runtime = "nodejs";
-export const maxDuration = 60; // allow longer for batch processing
+export const maxDuration = 60;
 
-const MAX_ROWS_BY_PLAN: Record<string, number> = {
-  free: 5,
-  pro: 50,
-  bulk: 500,
-  forwarder: 2000
-};
-
-type InputRow = {
-  description?: string;
-  origin?: string;
-  destination?: string;
-  quantity?: string;
-  fob_value_usd?: string;
-};
-
-type OutputRow = InputRow & {
-  hs_code: string;
-  confidence: number;
-  qualifies: "yes" | "no" | "marginal";
-  rule_applied: string;
-  preferential_rate: number;
-  mfn_rate: number;
-  savings_usd: number;
-  error?: string;
-};
+const Body = z.object({ csv: z.string().min(1).max(10_000_000) });
 
 export async function POST(req: Request) {
+  const logger = logFor(req, { route: "/api/bulk-classify" });
   const ip = clientIdentifier(req);
   const rl = await rateLimit(`bulk:${ip}`, "checkout");
   const headers = rateLimitResponseHeaders(rl);
@@ -43,117 +28,120 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many bulk uploads. Try again shortly." }, { status: 429, headers });
   }
 
-  try {
-    const user = await getSessionUser();
-    const planLimit = MAX_ROWS_BY_PLAN[user.plan] ?? MAX_ROWS_BY_PLAN.free;
+  const user = await getSessionUser();
+  const planLimit = PLAN_BULK_LIMITS[user.plan] ?? PLAN_BULK_LIMITS.free;
 
-    const body = await req.json();
-    const csv = String(body?.csv ?? "");
-    if (!csv.trim()) {
-      return NextResponse.json({ error: "csv is required" }, { status: 400, headers });
-    }
+  const json = await req.json().catch(() => ({}));
+  const parsedBody = Body.safeParse(json);
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: parsedBody.error.issues[0]?.message ?? "Invalid input" }, { status: 400, headers });
+  }
+  const csv = parsedBody.data.csv;
 
-    const parsed = Papa.parse<InputRow>(csv, { header: true, skipEmptyLines: true });
-    if (parsed.errors.length > 0) {
-      return NextResponse.json(
-        { error: `CSV parse error: ${parsed.errors[0].message}` },
-        { status: 400, headers }
-      );
-    }
+  const parsed = parseCsv(csv);
+  if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400, headers });
 
-    const rows = parsed.data.slice(0, planLimit);
-    const truncated = parsed.data.length > planLimit;
+  const allRows = parsed.rows;
+  const rows = allRows.slice(0, planLimit);
+  const truncated = allRows.length > planLimit;
 
-    const results: OutputRow[] = [];
-    for (const row of rows) {
-      const description = String(row.description ?? "").trim();
-      if (!description) {
-        results.push({ ...row, hs_code: "", confidence: 0, qualifies: "no", rule_applied: "", preferential_rate: 0, mfn_rate: 0, savings_usd: 0, error: "missing description" });
-        continue;
-      }
+  const db = getDb();
+  const useAsync = isQstashConfigured() && db && !user.isDemo && rows.length > ASYNC_THRESHOLD_ROWS;
 
-      try {
-        const cls = await classifyWithAI(description);
-        const orig = determineOrigin({
-          hsChapter: cls.hsPrefix,
-          wholeObtained: true, // optimistic default — user reviews in dashboard
-          regionalValueContent: 50
-        });
+  // -----------------------------------------------------------------
+  // Async path — persist a job row, enqueue, return id for polling.
+  // -----------------------------------------------------------------
+  if (useAsync && db) {
+    const inserted = await db
+      .insert(schema.bulkJobs)
+      .values({
+        workspaceId: user.workspaceId,
+        userId: user.id,
+        status: "queued",
+        totalRows: rows.length,
+        csvInput: csv
+      })
+      .returning({ id: schema.bulkJobs.id });
+    const jobId = inserted[0].id;
 
-        const fob = Number(row.fob_value_usd ?? 0);
-        const mfn = cls.tariff?.mfnRate ?? 0;
-        const afcfta = cls.tariff?.afcftaRate ?? 0;
-        const savings = ((mfn - afcfta) * fob) / 100;
+    const workerUrl = `${new URL(req.url).origin}/api/bulk-classify/worker`;
+    const messageId = await enqueue({
+      url: workerUrl,
+      body: { jobId },
+      retries: 2,
+      deduplicationId: `bulk-${jobId}`
+    });
 
-        // Persist (fire and forget — don't block the whole batch on one save)
-        void saveDetermination({
-          workspaceId: user.workspaceId,
-          description,
-          hsCode: cls.hsPrefix,
-          confidence: cls.confidence,
-          originCountry: String(row.origin ?? "").toUpperCase(),
-          destinationCountry: String(row.destination ?? "").toUpperCase(),
-          quantity: Number(row.quantity ?? 0) || undefined,
-          fobValueUsd: fob || undefined,
-          qualifies: orig.qualifies,
-          ruleApplied: orig.rule,
-          mfnRate: mfn,
-          afcftaRate: afcfta,
-          savingsUsd: savings
-        });
+    const { ipAddress, userAgent } = ipAndUaFromRequest(req);
+    audit({
+      workspaceId: user.workspaceId,
+      userId: user.id,
+      action: "bulk.classified" as never,
+      target: jobId,
+      metadata: { event: "queued", totalRows: rows.length, messageId },
+      ipAddress,
+      userAgent
+    });
 
-        results.push({
-          ...row,
-          hs_code: cls.hsPrefix,
-          confidence: cls.confidence,
-          qualifies: orig.qualifies,
-          rule_applied: orig.rule,
-          preferential_rate: afcfta,
-          mfn_rate: mfn,
-          savings_usd: Math.round(savings * 100) / 100
-        });
-      } catch (err) {
-        results.push({
-          ...row,
-          hs_code: "",
-          confidence: 0,
-          qualifies: "no",
-          rule_applied: "",
-          preferential_rate: 0,
-          mfn_rate: 0,
-          savings_usd: 0,
-          error: err instanceof Error ? err.message : "classification failed"
-        });
-      }
-    }
-
-    const totals = results.reduce(
-      (acc, r) => {
-        acc.totalSavings += r.savings_usd;
-        if (r.qualifies === "yes") acc.qualifying += 1;
-        if (r.qualifies === "marginal") acc.marginal += 1;
-        if (r.error) acc.errors += 1;
-        return acc;
-      },
-      { totalSavings: 0, qualifying: 0, marginal: 0, errors: 0 }
-    );
-
-    const exportCsv = Papa.unparse(results);
+    logger.info({ workspaceId: user.workspaceId, jobId, totalRows: rows.length, messageId }, "bulk job queued");
 
     return NextResponse.json(
-      {
-        ok: true,
-        processedRows: results.length,
-        truncated,
-        planLimit,
-        totals,
-        results,
-        exportCsv
-      },
+      { ok: true, async: true, jobId, status: "queued", totalRows: rows.length, planLimit, truncated },
       { headers }
     );
-  } catch (err) {
-    console.error("[/api/bulk-classify]", err);
-    return NextResponse.json({ error: "Bulk classification failed" }, { status: 500, headers });
   }
+
+  // -----------------------------------------------------------------
+  // Inline path — small batches OR no queue configured.
+  // -----------------------------------------------------------------
+  const t0 = Date.now();
+  const result = await processRows(rows, { workspaceId: user.workspaceId });
+
+  const { ipAddress, userAgent } = ipAndUaFromRequest(req);
+  audit({
+    workspaceId: user.workspaceId,
+    userId: user.id,
+    action: "bulk.classified" as never,
+    target: null,
+    metadata: { event: "inline", totalRows: rows.length, totalSavingsUsd: result.totals.totalSavings, durationMs: Date.now() - t0 },
+    ipAddress,
+    userAgent
+  });
+
+  return NextResponse.json(
+    {
+      ok: true,
+      async: false,
+      processedRows: result.results.length,
+      truncated,
+      planLimit,
+      totals: result.totals,
+      results: result.results,
+      exportCsv: result.exportCsv
+    },
+    { headers }
+  );
+}
+
+// GET /api/bulk-classify — list recent jobs for this workspace.
+export async function GET() {
+  const user = await getSessionUser();
+  const db = getDb();
+  if (!db || user.isDemo) return NextResponse.json({ jobs: [] });
+
+  const rows = await db
+    .select({
+      id: schema.bulkJobs.id,
+      status: schema.bulkJobs.status,
+      totalRows: schema.bulkJobs.totalRows,
+      processedRows: schema.bulkJobs.processedRows,
+      queuedAt: schema.bulkJobs.queuedAt,
+      completedAt: schema.bulkJobs.completedAt
+    })
+    .from(schema.bulkJobs)
+    .where(eq(schema.bulkJobs.workspaceId, user.workspaceId))
+    .orderBy(desc(schema.bulkJobs.queuedAt))
+    .limit(20);
+
+  return NextResponse.json({ jobs: rows });
 }

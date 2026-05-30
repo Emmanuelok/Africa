@@ -289,6 +289,39 @@ export const auditLog = pgTable(
 );
 
 // =============================================================================
+// Bulk classification jobs — when QStash is configured, large CSVs run async
+// via /api/bulk-classify/worker; when not, the request handler processes
+// inline (same as before).
+// =============================================================================
+export const bulkJobs = pgTable(
+  "bulk_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .references(() => workspaces.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    status: text("status").notNull().default("queued"), // queued | running | completed | failed | partial
+    totalRows: integer("total_rows").notNull(),
+    processedRows: integer("processed_rows").notNull().default(0),
+    qualifying: integer("qualifying").notNull().default(0),
+    marginal: integer("marginal").notNull().default(0),
+    errors: integer("errors").notNull().default(0),
+    totalSavingsUsd: numeric("total_savings_usd"),
+    csvInput: text("csv_input").notNull(),
+    csvOutput: text("csv_output"),
+    error: text("error"),
+    queuedAt: timestamp("queued_at").defaultNow().notNull(),
+    startedAt: timestamp("started_at"),
+    completedAt: timestamp("completed_at")
+  },
+  (t) => ({
+    wsIdx: index("bulk_workspace_idx").on(t.workspaceId),
+    createdIdx: index("bulk_queued_idx").on(t.queuedAt)
+  })
+);
+
+// =============================================================================
 // Suppressed emails — bounces, complaints, hard fails. Resend posts to
 // /api/webhooks/resend and we record the address here. sendEmail() consults
 // this list before delivering to anything (transactional, magic links, digest).

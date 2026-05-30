@@ -41,6 +41,8 @@ export function SigninForm() {
         // Our authorize() throws "2FA_REQUIRED" to signal the second-factor step.
         if (result.error.includes("2FA_REQUIRED")) {
           setNeedsTotp(true);
+        } else if (result.error.includes("RATE_LIMITED")) {
+          setError("Too many sign-in attempts on this email. Wait a few minutes before trying again.");
         } else if (needsTotp && !totp) {
           setError("Enter your 2FA code.");
         } else if (needsTotp) {

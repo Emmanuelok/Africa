@@ -13,6 +13,20 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.24.0",
+    type: "feature",
+    title: "Async bulk classify via QStash, auth brute-force rate limit, Sentry request-id breadcrumbs, OpenAPI YAML",
+    bullets: [
+      "Bulk classification > 30 rows now queues to QStash when configured: /api/bulk-classify writes a bulk_jobs row, enqueues, returns jobId immediately. /api/bulk-classify/worker (max 15 min) verifies the Upstash-Signature header, processes rows, updates processedRows every 10 entries, persists enriched CSV, and fires a notification on completion",
+      "/api/bulk-classify/jobs/[id] polled by the dashboard every 2.5s; progress bar shows N/M; first 100 result rows returned for preview, full CSV available via the existing download",
+      "Falls back to synchronous in-request processing when QStash isn't configured or batch is ≤30 rows — current behaviour preserved",
+      "Auth.js Credentials authorize() now rate-limits by email (5/min via the existing 'checkout' preset) — throws 'RATE_LIMITED' which SigninForm surfaces with a friendly retry message. Slows credential-stuffing/brute-force without blocking real users",
+      "Sentry server beforeSend tags every event with X-Request-Id pulled from the originating exception's request headers; client beforeSend stamps the last fetch-observed X-Request-Id so a frontend report correlates to the server log line that produced it",
+      "lib/openapi.ts now the single source of truth; /api/openapi.json and /api/openapi.yaml both render from it. YAML uses the yaml package, line width 120, alias-disabled output that Speakeasy / openapi-generator accept directly"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.23.0",
     type: "feature",
     title: "Structured logging, request IDs, idempotency on writes, more Stripe events, post-delete page",
