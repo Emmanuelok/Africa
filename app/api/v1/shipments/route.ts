@@ -5,6 +5,7 @@ import { determineOrigin } from "@/lib/data/classifier";
 import { lookupTariff } from "@/lib/data/tariffs";
 import { saveDetermination, saveCertificate } from "@/lib/data/determinations";
 import { rateLimit, rateLimitResponseHeaders } from "@/lib/ratelimit";
+import { getIdempotent, rememberIdempotent, readIdempotencyKey } from "@/lib/server/idempotency";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,15 @@ export async function POST(req: Request) {
   if (!rl.success) {
     recordUsage({ apiKeyId: auth.keyId, endpoint: "POST /v1/shipments", statusCode: 429, durationMs: Date.now() - t0 });
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429, headers });
+  }
+
+  const idem = readIdempotencyKey(req);
+  if (idem) {
+    const prev = await getIdempotent(`shipments:${auth.keyId}`, idem);
+    if (prev) {
+      recordUsage({ apiKeyId: auth.keyId, endpoint: "POST /v1/shipments", statusCode: prev.status, durationMs: Date.now() - t0 });
+      return NextResponse.json(prev.body, { status: prev.status, headers });
+    }
   }
 
   try {
@@ -103,27 +113,29 @@ export async function POST(req: Request) {
     }
 
     recordUsage({ apiKeyId: auth.keyId, endpoint: "POST /v1/shipments", statusCode: 200, durationMs: Date.now() - t0 });
-    return NextResponse.json(
-      {
-        determination_id: det.id,
-        classification: {
-          hs_code: cls.hsPrefix,
-          description: cls.description,
-          confidence: cls.confidence,
-          source: cls.source
-        },
-        origin: {
-          qualifies: orig.qualifies,
-          rule_applied: orig.rule,
-          reasoning: orig.reasoning
-        },
-        tariff: {
-          mfn_rate: mfn,
-          preferential_rate: afcfta,
-          savings_usd: Math.round(savings * 100) / 100
-        },
-        certificate
+    const responseBody = {
+      determination_id: det.id,
+      classification: {
+        hs_code: cls.hsPrefix,
+        description: cls.description,
+        confidence: cls.confidence,
+        source: cls.source
       },
+      origin: {
+        qualifies: orig.qualifies,
+        rule_applied: orig.rule,
+        reasoning: orig.reasoning
+      },
+      tariff: {
+        mfn_rate: mfn,
+        preferential_rate: afcfta,
+        savings_usd: Math.round(savings * 100) / 100
+      },
+      certificate
+    };
+    if (idem) await rememberIdempotent(`shipments:${auth.keyId}`, idem, { status: 200, body: responseBody });
+    return NextResponse.json(
+      responseBody,
       { headers }
     );
   } catch (err) {

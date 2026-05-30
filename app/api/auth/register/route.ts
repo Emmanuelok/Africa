@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { eq } from "drizzle-orm";
 
 import { getDb, schema } from "@/lib/db/client";
@@ -6,11 +7,21 @@ import { hashPassword } from "@/lib/auth/password";
 import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/ratelimit";
 import { verifyTurnstile } from "@/lib/captcha/turnstile";
 import { sendEmail } from "@/lib/email/resend";
-import { waitlistConfirmationEmail } from "@/lib/email/templates";
+import { emailVerificationEmail } from "@/lib/email/templates";
+import { issueToken } from "@/lib/auth/tokens";
+import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
+import { seedDefaultPreferences } from "@/lib/server/notify";
 
 export const runtime = "nodejs";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sokoni.africa";
+
+const Body = z.object({
+  email: z.string().email().max(320),
+  password: z.string().min(12, "Password must be at least 12 characters").max(256),
+  name: z.string().max(120).optional().nullable(),
+  captchaToken: z.string().nullable().optional()
+});
 
 export async function POST(req: Request) {
   const ip = clientIdentifier(req);
@@ -21,20 +32,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const email = String(body?.email ?? "").trim().toLowerCase();
-    const password = String(body?.password ?? "");
-    const name = String(body?.name ?? "").trim().slice(0, 120) || null;
-    const captchaToken = body?.captchaToken as string | null;
-
-    if (!EMAIL_RE.test(email)) {
-      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400, headers });
+    const json = await req.json().catch(() => ({}));
+    const parsed = Body.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400, headers });
     }
-    if (password.length < 12) {
-      return NextResponse.json({ error: "Password must be at least 12 characters." }, { status: 400, headers });
-    }
+    const email = parsed.data.email.trim().toLowerCase();
+    const password = parsed.data.password;
+    const name = parsed.data.name?.trim().slice(0, 120) || null;
 
-    const captchaOk = await verifyTurnstile(captchaToken, ip);
+    const captchaOk = await verifyTurnstile(parsed.data.captchaToken ?? null, ip);
     if (!captchaOk) {
       return NextResponse.json({ error: "Captcha verification failed." }, { status: 400, headers });
     }
@@ -58,11 +65,29 @@ export async function POST(req: Request) {
       .values({ email, name, passwordHash })
       .returning({ id: schema.users.id, email: schema.users.email });
 
-    // Welcome email — non-blocking.
-    const tpl = waitlistConfirmationEmail({ email });
-    void sendEmail({ to: email, subject: "Welcome to Sokoni", html: tpl.html, text: tpl.text });
+    // Seed default notification preferences for the new user.
+    void seedDefaultPreferences(inserted[0].id);
 
-    return NextResponse.json({ ok: true, user: inserted[0] }, { headers });
+    // Issue email verification token + send the email — non-blocking.
+    void (async () => {
+      const token = await issueToken("email-verify", email);
+      if (!token) return;
+      const url = `${SITE}/api/auth/verify?email=${encodeURIComponent(email)}&token=${token}`;
+      const tpl = emailVerificationEmail({ url, email });
+      await sendEmail({ to: email, subject: tpl.subject, html: tpl.html, text: tpl.text });
+    })();
+
+    const { ipAddress, userAgent } = ipAndUaFromRequest(req);
+    audit({
+      userId: inserted[0].id,
+      action: "user.registered",
+      actor: email,
+      metadata: { email },
+      ipAddress,
+      userAgent
+    });
+
+    return NextResponse.json({ ok: true, user: inserted[0], emailVerificationSent: true }, { headers });
   } catch (err) {
     console.error("[/api/auth/register]", err);
     return NextResponse.json({ error: "Could not create account." }, { status: 500, headers });

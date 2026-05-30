@@ -27,6 +27,41 @@ ${body}
 </body></html>`;
 }
 
+export function passwordResetEmail({ url, email }: { url: string; email: string }) {
+  const body = `
+    <h1 style="font-size:22px;color:#0f0f0e;margin:0 0 12px;">Reset your password</h1>
+    <p>Someone (hopefully you) asked to reset the password for <strong>${email}</strong>.</p>
+    <p>Click the button below to choose a new one. The link expires in 1 hour.</p>
+    <p style="margin:24px 0;">
+      <a href="${url}" style="display:inline-block;background:#b8401f;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:500;">Reset password</a>
+    </p>
+    <p style="font-size:13px;color:#85857d;word-break:break-all;">Or open this link: <br>${url}</p>
+    <p style="font-size:13px;color:#85857d;margin-top:24px;">If you didn't request this, ignore the email — your password stays unchanged.</p>
+  `;
+  return {
+    subject: "Reset your Sokoni password",
+    html: shell("Password reset", body),
+    text: `Reset your Sokoni password: ${url} (expires in 1 hour). If you didn't request this, ignore this email.`
+  };
+}
+
+export function emailVerificationEmail({ url, email }: { url: string; email: string }) {
+  const body = `
+    <h1 style="font-size:22px;color:#0f0f0e;margin:0 0 12px;">Confirm your email</h1>
+    <p>Welcome to Sokoni. Confirm <strong>${email}</strong> so we know we can reach you about your shipments, certificates, and billing.</p>
+    <p style="margin:24px 0;">
+      <a href="${url}" style="display:inline-block;background:#b8401f;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:500;">Confirm email</a>
+    </p>
+    <p style="font-size:13px;color:#85857d;word-break:break-all;">Or open this link: <br>${url}</p>
+    <p style="font-size:13px;color:#85857d;margin-top:24px;">The link expires in 24 hours. If you didn't sign up, ignore this email.</p>
+  `;
+  return {
+    subject: "Confirm your Sokoni email",
+    html: shell("Confirm email", body),
+    text: `Confirm your Sokoni email: ${url} (expires in 24 hours).`
+  };
+}
+
 export function waitlistConfirmationEmail({ email }: { email: string }) {
   const body = `
     <h1 style="font-size:22px;color:#0f0f0e;margin:0 0 12px;">You're on the list.</h1>

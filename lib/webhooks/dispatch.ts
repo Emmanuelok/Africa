@@ -51,7 +51,8 @@ export async function dispatch<T extends Record<string, unknown>>(opts: {
 
 async function deliverOnce(
   endpoint: typeof schema.webhookEndpoints.$inferSelect,
-  payload: WebhookPayload
+  payload: WebhookPayload,
+  opts: { previousAttempts?: number; replacesDeliveryId?: string } = {}
 ) {
   const db = getDb();
   if (!db) return;
@@ -89,6 +90,7 @@ async function deliverOnce(
   }
 
   const durationMs = Date.now() - start;
+  const attempts = (opts.previousAttempts ?? 0) + 1;
 
   await db.insert(schema.webhookDeliveries).values({
     endpointId: endpoint.id,
@@ -98,8 +100,19 @@ async function deliverOnce(
     responseBody,
     durationMs,
     succeeded,
-    nextRetryAt: succeeded ? null : retryAfter(endpoint.consecutiveFailures + 1)
+    attempts,
+    nextRetryAt: succeeded || attempts >= 6 ? null : retryAfter(attempts)
   }).catch((err) => console.warn("[webhooks] delivery insert failed:", err));
+
+  // Clear the pending retry on the original row so the cron doesn't keep
+  // picking it up.
+  if (opts.replacesDeliveryId) {
+    await db
+      .update(schema.webhookDeliveries)
+      .set({ nextRetryAt: null })
+      .where(eq(schema.webhookDeliveries.id, opts.replacesDeliveryId))
+      .catch(() => {});
+  }
 
   await db
     .update(schema.webhookEndpoints)
@@ -109,6 +122,32 @@ async function deliverOnce(
     })
     .where(eq(schema.webhookEndpoints.id, endpoint.id))
     .catch(() => {});
+
+  return { succeeded, statusCode, attempts };
+}
+
+// Pulled out of dispatch() so the retry cron can drive a single delivery.
+export async function redeliver(deliveryId: string) {
+  const db = getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(schema.webhookDeliveries)
+    .where(eq(schema.webhookDeliveries.id, deliveryId))
+    .limit(1);
+  const dlv = rows[0];
+  if (!dlv) return null;
+
+  const epRows = await db
+    .select()
+    .from(schema.webhookEndpoints)
+    .where(eq(schema.webhookEndpoints.id, dlv.endpointId))
+    .limit(1);
+  const endpoint = epRows[0];
+  if (!endpoint || !endpoint.enabled) return null;
+
+  const payload = dlv.payload as unknown as WebhookPayload;
+  return deliverOnce(endpoint, payload, { previousAttempts: dlv.attempts, replacesDeliveryId: dlv.id });
 }
 
 // Exponential backoff: 1m, 5m, 30m, 2h, 6h, 24h.

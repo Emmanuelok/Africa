@@ -1,12 +1,30 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getSessionUser } from "@/lib/server/session";
 import { saveDetermination, listDeterminations } from "@/lib/data/determinations";
 import { rateLimit, clientIdentifier, rateLimitResponseHeaders } from "@/lib/ratelimit";
 import { dispatch } from "@/lib/webhooks/dispatch";
 import { audit, ipAndUaFromRequest } from "@/lib/server/audit";
 import { notify } from "@/lib/server/notify";
+import { checkQuota } from "@/lib/server/quota";
 
 export const runtime = "nodejs";
+
+const Body = z.object({
+  description: z.string().min(1).max(2000),
+  hsCode: z.string().min(1).max(20),
+  confidence: z.number().min(0).max(1).optional(),
+  reasoning: z.string().max(4000).optional(),
+  originCountry: z.string().length(2),
+  destinationCountry: z.string().length(2),
+  quantity: z.number().nonnegative().optional(),
+  fobValueUsd: z.number().nonnegative().optional(),
+  qualifies: z.enum(["yes", "no", "marginal"]),
+  ruleApplied: z.string().min(1).max(200),
+  mfnRate: z.number().min(0).max(100).optional(),
+  afcftaRate: z.number().min(0).max(100).optional(),
+  savingsUsd: z.number().optional()
+});
 
 export async function POST(req: Request) {
   const ip = clientIdentifier(req);
@@ -18,28 +36,36 @@ export async function POST(req: Request) {
 
   try {
     const user = await getSessionUser();
-    const body = await req.json();
+    const json = await req.json().catch(() => ({}));
+    const parsed = Body.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Invalid input", issues: parsed.error.issues },
+        { status: 400, headers }
+      );
+    }
+    const body = parsed.data;
 
-    const required = ["description", "hsCode", "originCountry", "destinationCountry", "qualifies", "ruleApplied"];
-    for (const k of required) {
-      if (!body?.[k]) return NextResponse.json({ error: `${k} is required` }, { status: 400, headers });
+    const q = await checkQuota(user.workspaceId, user.plan, "determinationsPerMonth");
+    if (!q.ok) {
+      return NextResponse.json({ error: q.reason, used: q.used, limit: q.limit, code: "quota_exceeded" }, { status: 402, headers });
     }
 
     const result = await saveDetermination({
       workspaceId: user.workspaceId,
-      description: String(body.description),
-      hsCode: String(body.hsCode),
-      confidence: numOrUndef(body.confidence),
-      reasoning: body.reasoning ? String(body.reasoning) : undefined,
-      originCountry: String(body.originCountry),
-      destinationCountry: String(body.destinationCountry),
-      quantity: numOrUndef(body.quantity),
-      fobValueUsd: numOrUndef(body.fobValueUsd),
+      description: body.description,
+      hsCode: body.hsCode,
+      confidence: body.confidence,
+      reasoning: body.reasoning,
+      originCountry: body.originCountry.toUpperCase(),
+      destinationCountry: body.destinationCountry.toUpperCase(),
+      quantity: body.quantity,
+      fobValueUsd: body.fobValueUsd,
       qualifies: body.qualifies,
-      ruleApplied: String(body.ruleApplied),
-      mfnRate: numOrUndef(body.mfnRate),
-      afcftaRate: numOrUndef(body.afcftaRate),
-      savingsUsd: numOrUndef(body.savingsUsd)
+      ruleApplied: body.ruleApplied,
+      mfnRate: body.mfnRate,
+      afcftaRate: body.afcftaRate,
+      savingsUsd: body.savingsUsd
     });
 
     const { ipAddress, userAgent } = ipAndUaFromRequest(req);
@@ -108,10 +134,4 @@ export async function GET() {
   const user = await getSessionUser();
   const rows = await listDeterminations(user.workspaceId);
   return NextResponse.json({ determinations: rows });
-}
-
-function numOrUndef(v: unknown): number | undefined {
-  if (v === undefined || v === null) return undefined;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
 }

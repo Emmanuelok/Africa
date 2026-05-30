@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Lightweight middleware. Adds security headers; keeps /dashboard publicly
-// reachable for the demo. When real auth ships, gate /dashboard here using a
-// session cookie check (NOT the full Auth.js import, which pulls jose +
-// CompressionStream into the edge bundle).
+// Auth.js session cookie names (dev + prod variants for both v4 and v5).
+const SESSION_COOKIES = [
+  "authjs.session-token",
+  "__Secure-authjs.session-token",
+  "next-auth.session-token",
+  "__Secure-next-auth.session-token"
+];
 
 const SECURITY_HEADERS: Array<[string, string]> = [
   ["X-Content-Type-Options", "nosniff"],
@@ -12,9 +15,34 @@ const SECURITY_HEADERS: Array<[string, string]> = [
   ["Permissions-Policy", "camera=(), microphone=(), geolocation=()"]
 ];
 
-export function middleware(_req: NextRequest) {
+// Dashboard is auth-only when NEXTAUTH_SECRET is configured. Without it,
+// the app stays in demo mode (so the marketing site works without a DB),
+// matching the rest of the graceful-degradation pattern.
+const PROTECTED_PREFIXES = ["/dashboard"];
+
+function hasSession(req: NextRequest): boolean {
+  for (const name of SESSION_COOKIES) {
+    if (req.cookies.get(name)?.value) return true;
+  }
+  return false;
+}
+
+export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   for (const [k, v] of SECURITY_HEADERS) res.headers.set(k, v);
+
+  if (!process.env.NEXTAUTH_SECRET) return res;
+
+  const path = req.nextUrl.pathname;
+  if (!PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))) {
+    return res;
+  }
+
+  if (!hasSession(req)) {
+    const signin = new URL("/signin", req.nextUrl);
+    signin.searchParams.set("from", path);
+    return NextResponse.redirect(signin);
+  }
   return res;
 }
 

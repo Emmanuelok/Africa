@@ -13,6 +13,23 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.20.0",
+    type: "feature",
+    title: "Production hardening: real auth gating, password reset, email verify, quotas, idempotency, webhook retries, health check",
+    bullets: [
+      "Middleware actually redirects unauthenticated /dashboard requests to /signin?from= (when NEXTAUTH_SECRET is configured)",
+      "Password reset flow: /forgot-password → email with single-use token (SHA-256 hashed at rest, 1-hour TTL) → /reset-password with strength validation",
+      "Email verification on registration: token sent via Resend (24-hour TTL), /api/auth/verify consumes via GET so email link Just Works, /verify-email status page",
+      "Plan quota enforcement on /api/determinations and /api/certificates — Free tier: 1 det/mo, 0 certs/mo; Pro: 5 certs/mo; Bulk: 25; Forwarder: ∞. Returns 402 with quota_exceeded code",
+      "Idempotency-Key header support on POST /api/certificates and POST /api/v1/shipments — 24h replay window via Upstash; same key returns cached response, prevents double-charge / double-issue",
+      "Webhook retry processor (cron */5 * * * *) picks up failed deliveries with nextRetryAt in the past and redelivers via the same HMAC path; max 6 attempts; de-duped per endpoint per run",
+      "/api/health — Vercel/uptime-monitor probe: pings DB + Upstash, surfaces version (git SHA), region, uptime; 503 when any check fails",
+      "ConditionalAnalytics — Vercel Analytics only mounts when cookie consent === 'all' (was firing regardless before)",
+      "Zod validation on /api/determinations, /api/certificates, /api/auth/register, /api/auth/forgot, /api/auth/reset"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.19.0",
     type: "feature",
     title: "Landing hero translation, fuzzy search, mobile dashboard search",
