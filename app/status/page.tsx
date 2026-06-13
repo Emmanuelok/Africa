@@ -1,24 +1,72 @@
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { CheckCircle2, Activity } from "lucide-react";
+import { CheckCircle2, XCircle, Activity, AlertTriangle } from "lucide-react";
+import { runHealthChecks } from "@/lib/server/health";
+import { getDb, schema } from "@/lib/db/client";
+import { desc, gte } from "drizzle-orm";
 
 export const metadata = { title: "System status — Sokoni" };
+export const dynamic = "force-dynamic";
 
-const SYSTEMS = [
-  { name: "AfriOrigin web app", status: "operational" as const, uptime: 99.98 },
-  { name: "AfriOrigin API", status: "operational" as const, uptime: 99.97 },
-  { name: "HS classification (AI)", status: "operational" as const, uptime: 99.95 },
-  { name: "Certificate generation", status: "operational" as const, uptime: 99.99 },
-  { name: "Tariff lookup", status: "operational" as const, uptime: 100 },
-  { name: "Payments (Stripe/Paystack/Flutterwave)", status: "operational" as const, uptime: 99.94 },
-  { name: "Authentication", status: "operational" as const, uptime: 99.99 },
-  { name: "Live commodity prices", status: "operational" as const, uptime: 99.91 }
-];
+const LABELS: Record<string, string> = {
+  app: "Web application",
+  database: "Database (Postgres)",
+  redis: "Cache & rate limiting",
+  anthropic: "AI classification",
+  stripe: "Payments",
+  resend: "Email delivery",
+  blob: "Document storage",
+  queue: "Background jobs"
+};
 
-const INCIDENTS: Array<{ date: string; title: string; resolved: boolean; summary: string }> = [];
+const IMPACT_TONE = { critical: "terracotta", major: "terracotta", minor: "warn", none: "neutral" } as const;
 
-export default function StatusPage() {
-  const allUp = SYSTEMS.every((s) => s.status === "operational");
+export default async function StatusPage() {
+  // Real-time component health + DB-backed incidents.
+  const health = await runHealthChecks(false);
+  const components = Object.entries(health.checks).map(([key, c]) => ({
+    key,
+    label: LABELS[key] ?? key,
+    operational: c.status !== "fail",
+    configured: c.status !== "skipped",
+    latencyMs: c.latencyMs ?? null
+  }));
+
+  let incidents: Array<{
+    id: string;
+    title: string;
+    status: string;
+    impact: string;
+    body: string | null;
+    startedAt: string;
+    resolvedAt: string | null;
+  }> = [];
+  const db = getDb();
+  if (db) {
+    try {
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000);
+      const rows = await db
+        .select()
+        .from(schema.statusIncidents)
+        .where(gte(schema.statusIncidents.startedAt, ninetyDaysAgo))
+        .orderBy(desc(schema.statusIncidents.startedAt))
+        .limit(50);
+      incidents = rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        status: r.status,
+        impact: r.impact,
+        body: r.body,
+        startedAt: r.startedAt.toISOString(),
+        resolvedAt: r.resolvedAt?.toISOString() ?? null
+      }));
+    } catch {
+      // not migrated yet
+    }
+  }
+
+  const activeIncident = incidents.find((i) => i.status !== "resolved");
+  const allUp = components.every((c) => c.operational) && !activeIncident;
 
   return (
     <div className="bg-pattern">
@@ -27,25 +75,60 @@ export default function StatusPage() {
           <Activity className="h-3 w-3" /> Status
         </Badge>
         <h1 className="mt-3 font-display text-3xl font-semibold md:text-4xl">
-          {allUp ? "All systems operational." : "Some systems are degraded."}
+          {activeIncident
+            ? "We're investigating an incident."
+            : allUp
+              ? "All systems operational."
+              : "Some systems are degraded."}
         </h1>
         <p className="mt-2 text-sm text-ink-500">
-          Updated every 60 seconds · uptime last 90 days
+          Live component health · refreshed on every visit
         </p>
+
+        {activeIncident && (
+          <Card className="mt-6 border-amber-300 bg-amber-50/60">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{activeIncident.title}</span>
+                  <Badge tone={IMPACT_TONE[activeIncident.impact as keyof typeof IMPACT_TONE] ?? "neutral"}>
+                    {activeIncident.impact}
+                  </Badge>
+                </div>
+                <div className="mt-1 text-xs uppercase tracking-wide text-amber-700">{activeIncident.status}</div>
+                {activeIncident.body && <p className="mt-2 text-sm text-ink-700">{activeIncident.body}</p>}
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Card className="mt-8">
           <ul className="divide-y divide-ink-100">
-            {SYSTEMS.map((s) => (
-              <li key={s.name} className="flex items-center justify-between py-3">
+            {components.map((c) => (
+              <li key={c.key} className="flex items-center justify-between py-3">
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-savanna-600" />
-                  <span className="text-sm font-medium">{s.name}</span>
+                  {c.operational ? (
+                    <CheckCircle2 className="h-5 w-5 text-savanna-600" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-terracotta-600" />
+                  )}
+                  <span className="text-sm font-medium">{c.label}</span>
+                  {!c.configured && (
+                    <span className="text-[10px] uppercase tracking-wide text-ink-400">not enabled</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="rounded-full bg-savanna-50 px-2 py-0.5 text-xs font-medium text-savanna-700">
-                    Operational
+                  {c.latencyMs != null && (
+                    <span className="font-mono text-xs text-ink-400">{c.latencyMs}ms</span>
+                  )}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      c.operational ? "bg-savanna-50 text-savanna-700" : "bg-terracotta-50 text-terracotta-700"
+                    }`}
+                  >
+                    {c.operational ? "Operational" : "Down"}
                   </span>
-                  <span className="font-mono text-xs text-ink-600">{s.uptime.toFixed(2)}%</span>
                 </div>
               </li>
             ))}
@@ -53,8 +136,8 @@ export default function StatusPage() {
         </Card>
 
         <section className="mt-10">
-          <h2 className="font-display text-xl font-semibold">Past incidents</h2>
-          {INCIDENTS.length === 0 ? (
+          <h2 className="font-display text-xl font-semibold">Past incidents (90 days)</h2>
+          {incidents.length === 0 ? (
             <Card className="mt-4 text-center">
               <CheckCircle2 className="mx-auto h-8 w-8 text-savanna-600" />
               <div className="mt-2 font-semibold">No incidents in the last 90 days.</div>
@@ -65,13 +148,19 @@ export default function StatusPage() {
             </Card>
           ) : (
             <ul className="mt-4 space-y-3">
-              {INCIDENTS.map((i, idx) => (
-                <Card key={idx}>
-                  <div className="flex items-center justify-between">
-                    <div className="font-semibold">{i.title}</div>
-                    <span className="text-xs text-ink-500">{i.date}</span>
+              {incidents.map((i) => (
+                <Card key={i.id}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{i.title}</span>
+                      <Badge tone={i.status === "resolved" ? "savanna" : "warn"}>{i.status}</Badge>
+                    </div>
+                    <span className="text-xs text-ink-500">
+                      {new Date(i.startedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      {i.resolvedAt && ` · resolved`}
+                    </span>
                   </div>
-                  <p className="mt-2 text-sm text-ink-700">{i.summary}</p>
+                  {i.body && <p className="mt-2 text-sm text-ink-700">{i.body}</p>}
                 </Card>
               ))}
             </ul>
@@ -79,8 +168,8 @@ export default function StatusPage() {
         </section>
 
         <p className="mt-10 text-xs text-ink-500">
-          Subscribe to status updates: <a href="mailto:status@sokoni.africa" className="text-terracotta-700 hover:underline">status@sokoni.africa</a>{" "}
-          · RSS feed at <code className="font-mono">/status.rss</code> (coming with v1).
+          Programmatic status: <a href="/api/status" className="text-terracotta-700 hover:underline">/api/status</a>{" "}
+          · health probe: <a href="/api/health" className="text-terracotta-700 hover:underline">/api/health</a>.
         </p>
       </div>
     </div>

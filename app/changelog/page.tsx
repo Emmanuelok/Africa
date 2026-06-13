@@ -13,6 +13,20 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.31.0",
+    type: "feature",
+    title: "Real status page, status incidents API, leave-workspace",
+    bullets: [
+      "Health-probe logic extracted to lib/server/health.ts (shared by /api/health and the status page) — DB ping, Upstash ping, optional Anthropic deep probe, per-check latency",
+      "/status now renders LIVE component health (real probes on every visit) instead of a hardcoded 'all operational' list — a status page that can actually go red",
+      "status_incidents table + GET /api/status (public component health + 90-day incident feed, edge-cached 30s) and POST/PATCH /api/status/incidents (operator-gated by STATUS_ADMIN_SECRET) for posting and resolving incidents from a runbook",
+      "Active incidents surface a banner on /status; resolved ones show in the 90-day history",
+      "Member-side leave-workspace: POST /api/team/leave removes the caller; a sole owner is blocked (must transfer ownership or delete first). Leave button on the team page",
+      "Migration 0001_status_incidents generated"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.30.0",
     type: "feature",
     title: "v1 API integration tests, webhook replay + pagination, team management, ownership transfer",

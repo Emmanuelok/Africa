@@ -387,3 +387,28 @@ export const notifications = pgTable(
     createdIdx: index("notif_created_idx").on(t.createdAt)
   })
 );
+
+// =============================================================================
+// Status incidents — backs the public /status page. Operators post incidents
+// and updates here; the page renders real history rather than a static list.
+// =============================================================================
+export const statusIncidents = pgTable(
+  "status_incidents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    // investigating | identified | monitoring | resolved
+    status: text("status").notNull().default("investigating"),
+    // none | minor | major | critical
+    impact: text("impact").notNull().default("minor"),
+    // affected component keys (database, redis, anthropic, app, …)
+    components: jsonb("components").$type<string[]>().notNull().default([]),
+    body: text("body"),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    resolvedAt: timestamp("resolved_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    startedIdx: index("incident_started_idx").on(t.startedAt)
+  })
+);

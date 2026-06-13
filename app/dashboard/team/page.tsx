@@ -4,6 +4,7 @@ import { Mail, Clock } from "lucide-react";
 import { getSessionUser } from "@/lib/server/session";
 import { InviteForm } from "@/components/dashboard/InviteForm";
 import { TeamMembers } from "@/components/dashboard/TeamMembers";
+import { LeaveWorkspaceButton } from "@/components/dashboard/LeaveWorkspaceButton";
 import { getDb, schema } from "@/lib/db/client";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
@@ -88,6 +89,19 @@ export default async function TeamPage() {
           </div>
         </div>
       </Card>
+
+      {!user.isDemo && (
+        <Card>
+          <h2 className="font-semibold">Leave workspace</h2>
+          <p className="mt-1 text-sm text-ink-600">
+            Remove yourself from <strong>{user.workspaceName}</strong>. If you&apos;re the only
+            owner, transfer ownership or delete the workspace first.
+          </p>
+          <div className="mt-4">
+            <LeaveWorkspaceButton workspaceName={user.workspaceName} />
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
