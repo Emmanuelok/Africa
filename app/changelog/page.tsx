@@ -13,6 +13,19 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.30.0",
+    type: "feature",
+    title: "v1 API integration tests, webhook replay + pagination, team management, ownership transfer",
+    bullets: [
+      "15 v1 API integration tests hit the real route handlers (classify, determine-origin, tariff, certificates, shipments) in demo mode — auth/scope/validation/response-shape invariants + Idempotency-Key replay. Suite now 115 tests across 9 files",
+      "Webhook deliveries are cursor-paginated (25/page, 'load older' control) and now show attempt count + response body",
+      "Manual webhook replay: POST /api/webhooks/[id]/deliveries/[deliveryId]/replay re-sends a past payload via the same HMAC path (owner/admin); inline Replay button per delivery",
+      "Real team member management: /api/team/members lists actual members; PATCH/DELETE change roles or remove (owner-only role changes, can't remove or demote the last owner, admins can't touch owners). TeamMembers UI replaces the hardcoded demo list",
+      "Workspace ownership transfer: POST /api/team/transfer-ownership promotes a member to owner and demotes the caller (password + 2FA re-auth, atomic) — closes the gap the account-delete flow pointed at"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.28.0",
     type: "feature",
     title: "API usage analytics, determination detail view",

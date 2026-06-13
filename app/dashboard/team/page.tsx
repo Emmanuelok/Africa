@@ -3,16 +3,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Mail, Clock } from "lucide-react";
 import { getSessionUser } from "@/lib/server/session";
 import { InviteForm } from "@/components/dashboard/InviteForm";
+import { TeamMembers } from "@/components/dashboard/TeamMembers";
 import { getDb, schema } from "@/lib/db/client";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
 export const metadata = { title: "Team — Sokoni" };
-
-const DEMO_MEMBERS = [
-  { name: "Amara Okonkwo", email: "demo@sokoni.africa", role: "Owner", initial: "A" },
-  { name: "Kwame Mensah", email: "kwame@highlandscoffee.coop", role: "Admin", initial: "K" },
-  { name: "Nadia Hassan", email: "nadia@highlandscoffee.coop", role: "Member", initial: "N" }
-];
 
 export default async function TeamPage() {
   const user = await getSessionUser();
@@ -53,26 +48,7 @@ export default async function TeamPage() {
         <InviteForm />
       </header>
 
-      <Card className="p-0">
-        <ul className="divide-y divide-ink-100">
-          {DEMO_MEMBERS.map((m) => (
-            <li key={m.email} className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-terracotta-100 text-sm font-semibold text-terracotta-700">
-                  {m.initial}
-                </div>
-                <div>
-                  <div className="text-sm font-medium">{m.name}</div>
-                  <div className="text-xs text-ink-600">{m.email}</div>
-                </div>
-              </div>
-              <Badge tone={m.role === "Owner" ? "terracotta" : m.role === "Admin" ? "savanna" : "neutral"}>
-                {m.role}
-              </Badge>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <TeamMembers />
 
       {pendingInvites.length > 0 && (
         <div>

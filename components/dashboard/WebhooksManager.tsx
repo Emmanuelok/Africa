@@ -11,7 +11,8 @@ import {
   Copy,
   Check,
   CheckCircle2,
-  XCircle
+  XCircle,
+  RefreshCw
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -35,6 +36,7 @@ type Delivery = {
   succeeded: boolean;
   durationMs: number | null;
   attempts: number;
+  responseBody?: string | null;
   createdAt: string;
 };
 
@@ -50,6 +52,9 @@ export function WebhooksManager({ initial, isDemo }: { initial: Endpoint[]; isDe
   const [error, setError] = useState<string | null>(null);
   const [openEndpoint, setOpenEndpoint] = useState<string | null>(null);
   const [deliveries, setDeliveries] = useState<Record<string, Delivery[]>>({});
+  const [cursors, setCursors] = useState<Record<string, string | null>>({});
+  const [loadingMore, setLoadingMore] = useState<string | null>(null);
+  const [replaying, setReplaying] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<Record<string, string>>({});
 
   async function create() {
@@ -111,10 +116,32 @@ export function WebhooksManager({ initial, isDemo }: { initial: Endpoint[]; isDe
     setTimeout(() => setTestStatus((s) => { const n = { ...s }; delete n[id]; return n; }), 4000);
   }
 
-  async function loadDeliveries(id: string) {
-    const res = await fetch(`/api/webhooks/${id}/deliveries`);
+  async function loadDeliveries(id: string, cursor?: string | null) {
+    if (cursor) setLoadingMore(id);
+    const url = cursor ? `/api/webhooks/${id}/deliveries?cursor=${encodeURIComponent(cursor)}` : `/api/webhooks/${id}/deliveries`;
+    const res = await fetch(url);
     const data = await res.json();
-    setDeliveries((d) => ({ ...d, [id]: data.deliveries ?? [] }));
+    setDeliveries((d) => ({ ...d, [id]: cursor ? [...(d[id] ?? []), ...(data.deliveries ?? [])] : data.deliveries ?? [] }));
+    setCursors((c) => ({ ...c, [id]: data.nextCursor ?? null }));
+    setLoadingMore(null);
+  }
+
+  async function replay(endpointId: string, deliveryId: string) {
+    setReplaying(deliveryId);
+    try {
+      const res = await fetch(`/api/webhooks/${endpointId}/deliveries/${deliveryId}/replay`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        // Refresh the list so the new attempt shows.
+        await loadDeliveries(endpointId);
+      } else {
+        setError(data?.error ?? "Replay failed");
+      }
+    } catch {
+      setError("Replay failed");
+    } finally {
+      setReplaying(null);
+    }
   }
 
   function toggleOpen(id: string) {
@@ -306,20 +333,32 @@ export function WebhooksManager({ initial, isDemo }: { initial: Endpoint[]; isDe
                     {(deliveries[e.id] ?? []).map((d) => (
                       <li
                         key={d.id}
-                        className="flex items-center justify-between rounded-md bg-sand-50/50 px-2.5 py-1.5 text-xs"
+                        className="flex items-center justify-between gap-2 rounded-md bg-sand-50/50 px-2.5 py-1.5 text-xs"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
                           {d.succeeded ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-savanna-600" />
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-savanna-600" />
                           ) : (
-                            <XCircle className="h-3.5 w-3.5 text-terracotta-600" />
+                            <XCircle className="h-3.5 w-3.5 shrink-0 text-terracotta-600" />
                           )}
-                          <code className="font-mono">{d.event}</code>
+                          <code className="truncate font-mono">{d.event}</code>
+                          {d.attempts > 1 && (
+                            <span className="shrink-0 rounded bg-ink-100 px-1 text-[10px] text-ink-600">×{d.attempts}</span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3 text-ink-600">
+                        <div className="flex shrink-0 items-center gap-3 text-ink-600">
                           <span className="font-mono">{d.statusCode ?? "—"}</span>
-                          <span>{d.durationMs ?? "—"}ms</span>
-                          <span>{new Date(d.createdAt).toLocaleString()}</span>
+                          <span className="hidden sm:inline">{d.durationMs ?? "—"}ms</span>
+                          <span className="hidden md:inline">{new Date(d.createdAt).toLocaleString()}</span>
+                          <button
+                            onClick={() => replay(e.id, d.id)}
+                            disabled={replaying === d.id || isDemo}
+                            title={isDemo ? "Demo mode" : "Re-send this delivery"}
+                            className="inline-flex items-center gap-1 rounded border border-ink-200 px-1.5 py-0.5 text-[11px] font-medium hover:bg-white disabled:opacity-50"
+                          >
+                            {replaying === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                            Replay
+                          </button>
                         </div>
                       </li>
                     ))}
@@ -329,6 +368,16 @@ export function WebhooksManager({ initial, isDemo }: { initial: Endpoint[]; isDe
                       </li>
                     )}
                   </ul>
+                  {cursors[e.id] && (
+                    <button
+                      onClick={() => loadDeliveries(e.id, cursors[e.id])}
+                      disabled={loadingMore === e.id}
+                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-terracotta-700 hover:underline disabled:opacity-50"
+                    >
+                      {loadingMore === e.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                      Load older deliveries
+                    </button>
+                  )}
                 </div>
               )}
             </Card>
