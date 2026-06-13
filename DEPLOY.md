@@ -31,11 +31,26 @@ npm i -g vercel
 vercel link        # link local clone to your Vercel project
 vercel env pull    # writes .env.local with DATABASE_URL
 
-# Apply the schema
-npx drizzle-kit push
+# Apply versioned SQL migrations (recommended for production — reviewable,
+# reproducible, and won't silently drop columns)
+npm run db:migrate
 ```
 
-11 tables get created: `users`, `accounts`, `sessions`, `verification_tokens`, `workspaces`, `workspace_members`, `waitlist`, `determinations`, `certificates`, `api_keys`, `api_usage`.
+This applies `lib/db/migrations/*.sql` and records them in a
+`__drizzle_migrations` table, so re-running is safe and idempotent. **Run
+`npm run db:migrate` as part of every deploy** after pulling new migrations.
+
+When you change `lib/db/schema.ts`, generate a new migration with
+`npm run db:generate` and commit the resulting SQL file. For throwaway local
+experiments only, `npm run db:push` syncs the schema directly without a
+migration file.
+
+20 tables get created, covering auth (`users`, `accounts`, `sessions`,
+`verification_tokens`), workspaces + membership + invitations, billing/KYB
+columns, `determinations`, `certificates`, `api_keys`, `api_usage`,
+`webhook_endpoints`/`webhook_deliveries`, `notifications` +
+`notification_preferences`, `audit_log`, `bulk_jobs`, `suppressed_emails`,
+and `waitlist`.
 
 ---
 
