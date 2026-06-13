@@ -42,6 +42,9 @@ type VerifiedCert = {
   endorsedByAuthority: boolean;
   workspaceName: string;
   pdfId: string | null;
+  revoked: boolean;
+  revokedAt: string | null;
+  revokedReason: string | null;
 };
 
 async function resolve(reference: string): Promise<VerifiedCert | null> {
@@ -62,7 +65,10 @@ async function resolve(reference: string): Promise<VerifiedCert | null> {
       preferentialRate: det?.afcftaRate ?? null,
       endorsedByAuthority: demo.endorsedByAuthority,
       workspaceName: "Highlands Coffee Cooperative",
-      pdfId: demo.id
+      pdfId: demo.id,
+      revoked: false,
+      revokedAt: null,
+      revokedReason: null
     };
   }
 
@@ -110,7 +116,10 @@ async function resolve(reference: string): Promise<VerifiedCert | null> {
     preferentialRate: det?.afcftaRate ? Number(det.afcftaRate) : null,
     endorsedByAuthority: cert.endorsedByAuthority,
     workspaceName,
-    pdfId: cert.id
+    pdfId: cert.id,
+    revoked: !!cert.revokedAt,
+    revokedAt: cert.revokedAt?.toISOString() ?? null,
+    revokedReason: cert.revokedReason ?? null
   };
 }
 
@@ -180,6 +189,48 @@ export default async function VerifyPage({ params }: { params: { reference: stri
     month: "long",
     year: "numeric"
   });
+
+  if (cert.revoked) {
+    return (
+      <div className="bg-pattern">
+        <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
+          <div className="rounded-2xl border-2 border-terracotta-400 bg-terracotta-50/60 p-6 md:p-8">
+            <div className="flex items-start gap-4">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-terracotta-600 text-white">
+                <ShieldX className="h-7 w-7" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <Badge tone="terracotta">Revoked · Do not accept</Badge>
+                <h1 className="mt-2 font-display text-2xl font-semibold md:text-3xl">
+                  This certificate has been revoked
+                </h1>
+                <code className="mt-1 inline-block font-mono text-sm font-medium text-terracotta-700">
+                  {cert.reference}
+                </code>
+                <p className="mt-3 text-sm text-ink-700">
+                  Issued by <strong>{cert.workspaceName}</strong> and subsequently <strong>revoked</strong>
+                  {cert.revokedAt && (
+                    <> on {new Date(cert.revokedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</>
+                  )}
+                  . It is no longer valid and must not be used to claim AfCFTA preferential treatment.
+                </p>
+                {cert.revokedReason && (
+                  <p className="mt-2 text-sm text-ink-700">
+                    <strong>Reason given:</strong> {cert.revokedReason}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 rounded-xl border border-ink-200 bg-white p-4 text-xs text-ink-600">
+            <strong className="text-ink-900">For customs officers:</strong> a revoked certificate
+            should be rejected. If you believe this is an error, contact the issuing exporter, who
+            can issue a fresh certificate with a new reference.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-pattern">

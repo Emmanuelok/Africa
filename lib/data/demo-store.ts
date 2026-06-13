@@ -29,6 +29,7 @@ export type DemoCertificate = {
   exporterName: string;
   consigneeName: string;
   endorsedByAuthority: boolean;
+  revoked?: boolean;
   createdAt: string;
 };
 

@@ -4,12 +4,14 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { getSessionUser } from "@/lib/server/session";
 import { listCertificates } from "@/lib/data/determinations";
+import { RevokeCertificateButton } from "@/components/dashboard/RevokeCertificateButton";
 
 export const metadata = { title: "Certificates — Sokoni" };
 
 export default async function CertificatesPage() {
   const user = await getSessionUser();
   const items = await listCertificates(user.workspaceId);
+  const canRevoke = (user.role === "owner" || user.role === "admin") && !user.isDemo;
 
   return (
     <div className="space-y-6">
@@ -55,22 +57,29 @@ export default async function CertificatesPage() {
                   </div>
                   <div className="truncate text-xs text-ink-500">→ {c.consigneeName}</div>
                 </div>
-                {c.endorsedByAuthority ? (
+                {c.revoked ? (
+                  <Badge tone="terracotta">Revoked</Badge>
+                ) : c.endorsedByAuthority ? (
                   <Badge tone="savanna">Endorsed</Badge>
                 ) : (
                   <Badge tone="warn">Pending</Badge>
                 )}
               </div>
-              <div className="mt-3 flex items-center justify-between border-t border-ink-100 pt-3 text-xs">
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-ink-100 pt-3 text-xs">
                 <span className="text-ink-500">{formatDate(c.createdAt)}</span>
-                <a
-                  href={`/api/certificates/${c.id}/pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-terracotta-700 hover:underline"
-                >
-                  <Download className="h-3.5 w-3.5" /> Download PDF
-                </a>
+                <div className="flex items-center gap-3">
+                  {!c.revoked && canRevoke && (
+                    <RevokeCertificateButton certificateId={c.id} reference={c.reference} canRevoke />
+                  )}
+                  <a
+                    href={`/api/certificates/${c.id}/pdf`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-medium text-terracotta-700 hover:underline"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Download PDF
+                  </a>
+                </div>
               </div>
             </Card>
           ))}

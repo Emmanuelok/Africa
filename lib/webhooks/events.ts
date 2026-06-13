@@ -8,6 +8,7 @@ export const WEBHOOK_EVENTS = [
   "determination.rejected",
   "certificate.issued",
   "certificate.endorsed",
+  "certificate.revoked",
   "workspace.upgraded",
   "workspace.downgraded"
 ] as const;

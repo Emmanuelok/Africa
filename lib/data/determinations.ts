@@ -207,6 +207,7 @@ export async function listCertificates(workspaceId: string, limit = 50): Promise
     exporterName: r.exporterName ?? "",
     consigneeName: r.consigneeName ?? "",
     endorsedByAuthority: r.endorsedByAuthority,
+    revoked: !!r.revokedAt,
     createdAt: (r.createdAt instanceof Date ? r.createdAt : new Date(r.createdAt as unknown as string)).toISOString()
   }));
 }

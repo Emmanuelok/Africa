@@ -185,6 +185,11 @@ export const certificates = pgTable("certificates", {
   qrVerificationUrl: text("qr_verification_url"),
   endorsedByAuthority: boolean("endorsed_by_authority").default(false).notNull(),
   endorsedAt: timestamp("endorsed_at"),
+  // Revocation — a Certificate of Origin issued in error must be invalidatable.
+  // The public /verify page reflects this state.
+  revokedAt: timestamp("revoked_at"),
+  revokedReason: text("revoked_reason"),
+  revokedById: uuid("revoked_by_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 

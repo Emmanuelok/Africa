@@ -13,6 +13,19 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.27.0",
+    type: "feature",
+    title: "Certificate revocation, certificate.revoked webhook, expanded test suite",
+    bullets: [
+      "Certificates can be revoked: POST /api/certificates/[id]/revoke (owner/admin only, reason required). Adds revoked_at / revoked_reason / revoked_by_id columns",
+      "Public /verify/[reference] shows a prominent 'Revoked · Do not accept' state with the reason and a customs-officer note — a Certificate of Origin issued in error is now genuinely invalidatable",
+      "Revoke action + 'Revoked' badge in the dashboard certificates list (gated to owner/admin)",
+      "New certificate.revoked webhook event in the taxonomy + dispatched on revocation; system.update notification fired",
+      "Expanded test suite to 100 tests: plan-quota limits, checkQuota unlimited/demo paths, Idempotency-Key extraction + length cap, API scope coverage, bulk CSV parsing + plan limits"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.26.0",
     type: "feature",
     title: "Data export, DPA + sub-processors pages, public-verify rate limiting",
