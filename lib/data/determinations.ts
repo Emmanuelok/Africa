@@ -85,6 +85,41 @@ export async function listDeterminations(workspaceId: string, limit = 50): Promi
   }));
 }
 
+export type DeterminationDetail = DemoDetermination & { reasoning: string | null };
+
+// Single determination scoped to the workspace, with the stored reasoning.
+export async function getDetermination(workspaceId: string, id: string): Promise<DeterminationDetail | null> {
+  const db = getDb();
+  if (!db || workspaceId === "demo-workspace" || id.startsWith("det_demo_")) {
+    const demo = DEMO_DETERMINATIONS.find((d) => d.id === id) ?? null;
+    return demo ? { ...demo, reasoning: null } : null;
+  }
+  const rows = await db
+    .select()
+    .from(schema.determinations)
+    .where(eq(schema.determinations.id, id))
+    .limit(1);
+  const r = rows[0];
+  if (!r || r.workspaceId !== workspaceId) return null;
+  return {
+    id: r.id,
+    description: r.description,
+    hsCode: r.hsCode ?? "",
+    confidence: Number(r.confidence ?? 0),
+    originCountry: r.originCountry,
+    destinationCountry: r.destinationCountry,
+    quantity: Number(r.quantity ?? 0),
+    fobValueUsd: Number(r.fobValueUsd ?? 0),
+    qualifies: (r.qualifies as "yes" | "no" | "marginal") ?? "yes",
+    ruleApplied: r.ruleApplied ?? "",
+    mfnRate: Number(r.mfnRate ?? 0),
+    afcftaRate: Number(r.afcftaRate ?? 0),
+    savingsUsd: Number(r.savingsUsd ?? 0),
+    reasoning: r.reasoning ?? null,
+    createdAt: (r.createdAt instanceof Date ? r.createdAt : new Date(r.createdAt as unknown as string)).toISOString()
+  };
+}
+
 export function generateCertReference(): string {
   // AFCFTA-<8 alphanumerics> e.g. AFCFTA-K9P4XJ02
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

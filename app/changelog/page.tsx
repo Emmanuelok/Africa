@@ -13,6 +13,18 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.28.0",
+    type: "feature",
+    title: "API usage analytics, determination detail view",
+    bullets: [
+      "/dashboard/api-usage surfaces what we already recorded in api_usage but never showed: total calls, error rate, avg + p95 latency (Postgres percentile_cont), a 14-day calls-per-day bar chart with error overlay, and a per-endpoint breakdown. Gives the developer tier real consumption visibility",
+      "apiUsageSummary() does it in three grouped queries scoped to the workspace's keys — no per-row fetch; demo data renders the page without a DB",
+      "API Usage added to desktop + mobile dashboard nav; linked from the API keys page",
+      "/dashboard/determinations/[id] detail view: full HS + lane + savings, tariff breakdown (MFN vs AfCFTA, FOB, quantity, confidence, rule), stored origin reasoning, and a 'create certificate' CTA for qualifying shipments. Determination rows are now clickable"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.27.0",
     type: "feature",
     title: "Certificate revocation, certificate.revoked webhook, expanded test suite",

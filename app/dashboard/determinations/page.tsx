@@ -46,9 +46,13 @@ export default async function DeterminationsPage() {
           </thead>
           <tbody className="divide-y divide-ink-100">
             {items.map((d) => (
-              <tr key={d.id} className="hover:bg-sand-50/60">
-                <td className="px-4 py-3 text-xs text-ink-600">{formatDate(d.createdAt)}</td>
-                <td className="max-w-[240px] truncate px-4 py-3 font-medium">{d.description}</td>
+              <tr key={d.id} className="cursor-pointer hover:bg-sand-50/60">
+                <td className="px-4 py-3 text-xs text-ink-600">
+                  <Link href={`/dashboard/determinations/${d.id}`} className="block">{formatDate(d.createdAt)}</Link>
+                </td>
+                <td className="max-w-[240px] truncate px-4 py-3 font-medium">
+                  <Link href={`/dashboard/determinations/${d.id}`} className="block hover:text-terracotta-700">{d.description}</Link>
+                </td>
                 <td className="px-4 py-3 font-mono text-xs">{d.hsCode}</td>
                 <td className="px-4 py-3 text-xs">
                   {flag(d.originCountry)} {getCountry(d.originCountry)?.name ?? d.originCountry}

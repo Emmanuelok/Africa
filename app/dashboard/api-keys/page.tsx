@@ -63,12 +63,14 @@ export default async function ApiKeysPage() {
           <code className="rounded bg-ink-100 px-2 py-0.5 font-mono">POST /api/v1/determine-origin</code>
           <code className="rounded bg-ink-100 px-2 py-0.5 font-mono">GET /api/v1/tariff</code>
         </div>
-        <Link
-          href="/docs/api"
-          className="mt-4 inline-block text-sm font-medium text-terracotta-700 hover:underline"
-        >
-          Full API docs →
-        </Link>
+        <div className="mt-4 flex flex-wrap gap-4 text-sm font-medium">
+          <Link href="/docs/api" className="text-terracotta-700 hover:underline">
+            Full API docs →
+          </Link>
+          <Link href="/dashboard/api-usage" className="text-terracotta-700 hover:underline">
+            View API usage →
+          </Link>
+        </div>
       </Card>
     </div>
   );
