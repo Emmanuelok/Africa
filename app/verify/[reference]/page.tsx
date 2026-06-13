@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import {
   ShieldCheck,
@@ -14,8 +15,18 @@ import { Card } from "@/components/ui/Card";
 import { getDb, schema } from "@/lib/db/client";
 import { DEMO_CERTIFICATES, DEMO_DETERMINATIONS } from "@/lib/data/demo-store";
 import { getCountry } from "@/lib/data/countries";
+import { rateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
+
+// Public, unauthenticated route. The reference space is high-entropy
+// (AFCFTA-XXXXXXXX over 32 chars) so enumeration isn't practical, but we still
+// throttle per IP to protect the database from a hammering attack.
+function clientIp(): string {
+  const h = headers();
+  const fwd = h.get("x-forwarded-for");
+  return fwd?.split(",")[0]?.trim() || h.get("x-real-ip") || "anon";
+}
 
 type VerifiedCert = {
   reference: string;
@@ -112,6 +123,25 @@ export async function generateMetadata({ params }: { params: { reference: string
 }
 
 export default async function VerifyPage({ params }: { params: { reference: string } }) {
+  // 30 lookups / minute / IP — generous for a customs officer scanning a
+  // batch, restrictive enough to deter scraping. No-op without Upstash.
+  const rl = await rateLimit(`verify:${clientIp()}`, "classify");
+  if (!rl.success) {
+    return (
+      <div className="bg-pattern">
+        <div className="mx-auto max-w-2xl px-4 py-16 text-center md:px-6 md:py-24">
+          <h1 className="font-display text-2xl font-semibold">Too many requests</h1>
+          <p className="mt-2 text-ink-700">
+            You&apos;ve made a lot of verification requests. Wait a minute and try again.
+          </p>
+          <Link href="/" className="mt-6 inline-block text-sm font-medium text-terracotta-700 hover:underline">
+            Back to sokoni.africa →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const cert = await resolve(params.reference);
 
   if (!cert) {

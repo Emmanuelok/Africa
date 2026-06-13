@@ -13,6 +13,19 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.26.0",
+    type: "feature",
+    title: "Data export, DPA + sub-processors pages, public-verify rate limiting",
+    bullets: [
+      "GET /api/determinations/export and /api/certificates/export stream full workspace history as CSV (50k row cap) — accounting + customs filing. Export buttons added to both dashboard list pages",
+      "/dpa — a real Data Processing Agreement (GDPR/UK GDPR/POPIA/NDPA/KDPA): roles, processing scope, sub-processor authorisation, Data Subject rights, security measures, SCC/IDTA transfer mechanism, 72h breach notification. Removes a recurring enterprise-sales blocker",
+      "/subprocessors — itemised sub-processor register (purpose, location, data category) with 30-day change-notification commitment; privacy policy now links the real page instead of /security",
+      "Public /verify/[reference] now rate-limited 30/min/IP — the reference space is high-entropy so enumeration was never practical, but this protects the DB from a hammering attack",
+      "DPA + sub-processors linked from the footer and added to the sitemap"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.25.0",
     type: "feature",
     title: "Stripe Tax, dashboard aggregates fix, retention prune, Anthropic model pin, deep health probe",

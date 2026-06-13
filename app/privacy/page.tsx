@@ -55,7 +55,8 @@ export default function PrivacyPage() {
       </ul>
       <p>
         A full list of sub-processors is available at{" "}
-        <a href="/security">/security</a>. We do not sell personal data.
+        <a href="/subprocessors">/subprocessors</a>. We do not sell personal data. Customers can
+        execute a <a href="/dpa">Data Processing Agreement</a> with us.
       </p>
 
       <h2>6. International transfers</h2>

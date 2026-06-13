@@ -38,7 +38,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { p: "/signup", change: "monthly" as const, prio: 0.4 },
     { p: "/signin", change: "yearly" as const, prio: 0.3 },
     { p: "/terms", change: "yearly" as const, prio: 0.25 },
-    { p: "/privacy", change: "yearly" as const, prio: 0.25 }
+    { p: "/privacy", change: "yearly" as const, prio: 0.25 },
+    { p: "/dpa", change: "yearly" as const, prio: 0.25 },
+    { p: "/subprocessors", change: "monthly" as const, prio: 0.25 }
   ];
 
   const localePaths = LOCALES.filter((l) => l.code !== "en").map((l) => ({

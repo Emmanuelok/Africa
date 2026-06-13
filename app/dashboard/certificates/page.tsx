@@ -13,11 +13,21 @@ export default async function CertificatesPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-display text-2xl font-semibold md:text-3xl">Certificates of Origin</h1>
-        <p className="mt-1 text-sm text-ink-600">
-          AfCFTA Annex II Appendix I format. Accepted electronically across all 54 State Parties.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-semibold md:text-3xl">Certificates of Origin</h1>
+          <p className="mt-1 text-sm text-ink-600">
+            AfCFTA Annex II Appendix I format. Accepted electronically across all 54 State Parties.
+          </p>
+        </div>
+        {items.length > 0 && (
+          <a
+            href="/api/certificates/export"
+            className="inline-flex items-center gap-2 rounded-lg border border-ink-300 bg-white px-3 py-2 text-sm font-medium hover:bg-ink-50"
+          >
+            <Download className="h-4 w-4" /> Export CSV
+          </a>
+        )}
       </header>
 
       {items.length === 0 ? (

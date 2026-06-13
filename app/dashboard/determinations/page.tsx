@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wand2 } from "lucide-react";
+import { Wand2, Download } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -15,11 +15,19 @@ export default async function DeterminationsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-semibold md:text-3xl">Determinations</h1>
-        <Button href="/afriorigin" size="md">
-          <Wand2 className="h-4 w-4" /> New shipment
-        </Button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/api/determinations/export"
+            className="inline-flex items-center gap-2 rounded-lg border border-ink-300 bg-white px-3 py-2 text-sm font-medium hover:bg-ink-50"
+          >
+            <Download className="h-4 w-4" /> Export CSV
+          </a>
+          <Button href="/afriorigin" size="md">
+            <Wand2 className="h-4 w-4" /> New shipment
+          </Button>
+        </div>
       </header>
 
       <Card className="p-0">
