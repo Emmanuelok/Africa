@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { getDb, schema } from "@/lib/db/client";
 import { log } from "@/lib/log";
@@ -209,4 +209,60 @@ export async function listCertificates(workspaceId: string, limit = 50): Promise
     endorsedByAuthority: r.endorsedByAuthority,
     createdAt: (r.createdAt instanceof Date ? r.createdAt : new Date(r.createdAt as unknown as string)).toISOString()
   }));
+}
+
+export type WorkspaceStats = {
+  determinations: number;
+  certificates: number;
+  endorsedCertificates: number;
+  qualifying: number;
+  totalSavingsUsd: number;
+  totalFobUsd: number;
+};
+
+// Single round-trip aggregates for the overview tiles. Replaces computing
+// metrics off a truncated list (which only reflected the latest few rows).
+export async function workspaceStats(workspaceId: string): Promise<WorkspaceStats> {
+  const db = getDb();
+
+  if (!db || workspaceId === "demo-workspace") {
+    const dets = DEMO_DETERMINATIONS;
+    const certs = DEMO_CERTIFICATES;
+    return {
+      determinations: dets.length,
+      certificates: certs.length,
+      endorsedCertificates: certs.filter((c) => c.endorsedByAuthority).length,
+      qualifying: dets.filter((d) => d.qualifies === "yes").length,
+      totalSavingsUsd: dets.reduce((s, d) => s + d.savingsUsd, 0),
+      totalFobUsd: dets.reduce((s, d) => s + d.fobValueUsd, 0)
+    };
+  }
+
+  const [detAgg, certAgg] = await Promise.all([
+    db
+      .select({
+        count: sql<number>`count(*)::int`,
+        qualifying: sql<number>`count(*) filter (where ${schema.determinations.qualifies} = 'yes')::int`,
+        savings: sql<number>`coalesce(sum(${schema.determinations.savingsUsd}), 0)::float8`,
+        fob: sql<number>`coalesce(sum(${schema.determinations.fobValueUsd}), 0)::float8`
+      })
+      .from(schema.determinations)
+      .where(eq(schema.determinations.workspaceId, workspaceId)),
+    db
+      .select({
+        count: sql<number>`count(*)::int`,
+        endorsed: sql<number>`count(*) filter (where ${schema.certificates.endorsedByAuthority} = true)::int`
+      })
+      .from(schema.certificates)
+      .where(eq(schema.certificates.workspaceId, workspaceId))
+  ]);
+
+  return {
+    determinations: detAgg[0]?.count ?? 0,
+    certificates: certAgg[0]?.count ?? 0,
+    endorsedCertificates: certAgg[0]?.endorsed ?? 0,
+    qualifying: detAgg[0]?.qualifying ?? 0,
+    totalSavingsUsd: detAgg[0]?.savings ?? 0,
+    totalFobUsd: detAgg[0]?.fob ?? 0
+  };
 }

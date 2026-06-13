@@ -13,6 +13,21 @@ type Entry = {
 const CHANGELOG: Entry[] = [
   {
     date: "18 May 2026",
+    version: "0.25.0",
+    type: "feature",
+    title: "Stripe Tax, dashboard aggregates fix, retention prune, Anthropic model pin, deep health probe",
+    bullets: [
+      "Stripe Tax: checkout now collects billing address + business tax ID and enables automatic_tax when STRIPE_TAX_ENABLED=true — EU reverse-charge and compliant invoices. Reuses the workspace's existing Stripe customer so addresses/tax IDs carry over instead of creating duplicates",
+      "Dashboard overview metrics are now true workspace aggregates (workspaceStats does a single COUNT/SUM/FILTER round-trip) — fixes a correctness bug where 'AfCFTA savings' and 'qualifying rate' only reflected the latest 5 rows",
+      "Daily cleanup cron now enforces retention: audit log 7y (customs minimum), notifications 180d, webhook deliveries 90d, API usage 400d, finished bulk jobs 30d, plus expired unaccepted invitations — keeps tables from growing unbounded",
+      "Anthropic model pinned to a dated snapshot via ANTHROPIC_MODEL env override; SDK now uses maxRetries:2 + 30s timeout for resilience",
+      "Health check: /api/health?deep=1 does a real Anthropic /v1/models reachability probe (no token spend); adds a queue (QStash) check",
+      "All console.* in checkout/cleanup replaced with structured pino logging",
+      "New env vars documented: ANTHROPIC_MODEL, RESEND_WEBHOOK_SECRET, QSTASH_*, STRIPE_TAX_ENABLED"
+    ]
+  },
+  {
+    date: "18 May 2026",
     version: "0.24.0",
     type: "feature",
     title: "Async bulk classify via QStash, auth brute-force rate limit, Sentry request-id breadcrumbs, OpenAPI YAML",

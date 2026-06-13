@@ -4,22 +4,23 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { getSessionUser } from "@/lib/server/session";
-import { listDeterminations, listCertificates } from "@/lib/data/determinations";
+import { listDeterminations, listCertificates, workspaceStats } from "@/lib/data/determinations";
 import { getCountry } from "@/lib/data/countries";
 
 export const metadata = { title: "Overview — Sokoni" };
 
 export default async function DashboardOverview() {
   const user = await getSessionUser();
-  const [determinations, certificates] = await Promise.all([
+  const [determinations, certificates, stats] = await Promise.all([
     listDeterminations(user.workspaceId, 5),
-    listCertificates(user.workspaceId, 5)
+    listCertificates(user.workspaceId, 5),
+    workspaceStats(user.workspaceId)
   ]);
 
-  const totalSavings = determinations.reduce((s, d) => s + d.savingsUsd, 0);
-  const totalFob = determinations.reduce((s, d) => s + d.fobValueUsd, 0);
-  const qualifyingPct = determinations.length
-    ? Math.round((determinations.filter((d) => d.qualifies === "yes").length / determinations.length) * 100)
+  const totalSavings = stats.totalSavingsUsd;
+  const totalFob = stats.totalFobUsd;
+  const qualifyingPct = stats.determinations
+    ? Math.round((stats.qualifying / stats.determinations) * 100)
     : 0;
 
   return (
@@ -41,14 +42,14 @@ export default async function DashboardOverview() {
         <Metric
           icon={<ShieldCheck className="h-4 w-4" />}
           label="Determinations"
-          value={String(determinations.length)}
-          sub="Last 30 days"
+          value={String(stats.determinations)}
+          sub="All time"
         />
         <Metric
           icon={<FileCheck2 className="h-4 w-4" />}
           label="Certificates issued"
-          value={String(certificates.length)}
-          sub={`${certificates.filter((c) => c.endorsedByAuthority).length} endorsed`}
+          value={String(stats.certificates)}
+          sub={`${stats.endorsedCertificates} endorsed`}
         />
         <Metric
           icon={<Wallet className="h-4 w-4" />}
@@ -165,10 +166,10 @@ export default async function DashboardOverview() {
           <h2 className="font-display text-lg font-semibold">Plan & usage</h2>
           <div className="mt-4 space-y-3 text-sm">
             <UsageRow label="Plan" value={user.plan.toUpperCase()} />
-            <UsageRow label="Determinations" value={`${determinations.length} / ∞`} />
+            <UsageRow label="Determinations" value={`${stats.determinations} / ${user.plan === "free" ? "1/mo" : "∞"}`} />
             <UsageRow
-              label="Certificates this month"
-              value={`${certificates.length} / ${planLimit(user.plan)}`}
+              label="Certificates issued"
+              value={`${stats.certificates} / ${planLimit(user.plan)}`}
             />
             <UsageRow label="Languages enabled" value="5" />
           </div>

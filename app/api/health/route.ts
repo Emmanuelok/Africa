@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // uptime-kuma, etc. Returns 200 only when configured dependencies are
 // reachable; degrades to "ok with warnings" if some optional services are
 // missing so demo deploys don't false-positive.
-export async function GET() {
+export async function GET(req: Request) {
   const start = Date.now();
   const checks: Record<string, { status: "ok" | "fail" | "skipped"; latencyMs?: number; detail?: string }> = {};
 
@@ -47,11 +47,38 @@ export async function GET() {
     checks.redis = { status: "skipped" };
   }
 
-  // Anthropic — surfaced as configured/not-configured (don't burn a token).
-  checks.anthropic = { status: process.env.ANTHROPIC_API_KEY ? "ok" : "skipped" };
+  // Anthropic — a real reachability probe against the public models endpoint.
+  // GET /v1/models is cheap (no inference, no token spend) and returns 200
+  // when the key is valid, 401 when revoked. Use ?deep=1 to include it; the
+  // default health probe skips it to keep the endpoint sub-100ms.
+  const deep = new URL(req.url).searchParams.get("deep") === "1";
+  if (process.env.ANTHROPIC_API_KEY) {
+    if (deep) {
+      const aStart = Date.now();
+      try {
+        const res = await fetch("https://api.anthropic.com/v1/models?limit=1", {
+          headers: {
+            "x-api-key": process.env.ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01"
+          },
+          signal: AbortSignal.timeout(4000)
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        checks.anthropic = { status: "ok", latencyMs: Date.now() - aStart };
+      } catch (err) {
+        checks.anthropic = { status: "fail", detail: err instanceof Error ? err.message : "probe failed", latencyMs: Date.now() - aStart };
+      }
+    } else {
+      checks.anthropic = { status: "ok" };
+    }
+  } else {
+    checks.anthropic = { status: "skipped" };
+  }
+
   checks.stripe = { status: process.env.STRIPE_SECRET_KEY ? "ok" : "skipped" };
   checks.resend = { status: process.env.RESEND_API_KEY ? "ok" : "skipped" };
   checks.blob = { status: process.env.BLOB_READ_WRITE_TOKEN ? "ok" : "skipped" };
+  checks.queue = { status: process.env.QSTASH_TOKEN ? "ok" : "skipped" };
 
   const anyFailed = Object.values(checks).some((c) => c.status === "fail");
   const status = anyFailed ? 503 : 200;
