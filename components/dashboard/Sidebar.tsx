@@ -17,6 +17,7 @@ import {
   Gauge,
   BadgeCheck,
   Palette,
+  Bot,
   LogOut
 } from "lucide-react";
 import { NotificationsBell } from "@/components/dashboard/NotificationsBell";
@@ -29,6 +30,7 @@ const NAV = [
   { href: "/dashboard/certificates", label: "Certificates", icon: FileCheck2 },
   { href: "/dashboard/bulk", label: "Bulk classify", icon: FileSpreadsheet },
   { href: "/afriorigin", label: "New shipment", icon: Wand2, primary: true },
+  { href: "/dashboard/agents", label: "Agents", icon: Bot },
   { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
   { href: "/dashboard/api-usage", label: "API Usage", icon: Gauge },
   { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },

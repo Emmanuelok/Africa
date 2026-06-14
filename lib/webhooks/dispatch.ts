@@ -26,6 +26,12 @@ export async function dispatch<T extends Record<string, unknown>>(opts: {
   const db = getDb();
   if (!db) return; // demo mode — webhooks are no-op without persistence
 
+  // Fan the event out to any internal agents subscribed to it. Fire-and-forget
+  // via lazy import to avoid a module cycle (agent tools import this dispatcher).
+  void import("@/lib/agents/triggers")
+    .then((m) => m.enqueueEventRuns(opts.workspaceId, opts.event, opts.object))
+    .catch(() => {});
+
   const endpoints = await db
     .select()
     .from(schema.webhookEndpoints)

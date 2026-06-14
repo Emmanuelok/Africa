@@ -17,7 +17,12 @@ export type AuditAction =
   | "workspace.member_removed"
   | "billing.subscribed"
   | "billing.canceled"
-  | "bulk.classified";
+  | "bulk.classified"
+  | "agent.created"
+  | "agent.updated"
+  | "agent.deleted"
+  | "agent.run_started"
+  | "agent.approval_resolved";
 
 export type AuditInput = {
   workspaceId?: string | null;

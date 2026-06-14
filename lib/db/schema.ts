@@ -412,3 +412,119 @@ export const statusIncidents = pgTable(
     startedIdx: index("incident_started_idx").on(t.startedAt)
   })
 );
+
+// =============================================================================
+// Agents — long-running, stateful automations that watch for events and take
+// action on the user's behalf. Each agent is an instance of a built-in
+// template (kind) configured for one workspace. Triggers: manual run, cron
+// schedule, or webhook event.
+// =============================================================================
+export const agents = pgTable(
+  "agents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .references(() => workspaces.id, { onDelete: "cascade" })
+      .notNull(),
+    kind: text("kind").notNull(), // template identifier — see lib/agents/catalogue.ts
+    name: text("name").notNull(),
+    description: text("description"),
+    enabled: boolean("enabled").notNull().default(true),
+    config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
+    // Schedule: cron expression in UTC, e.g. "0 6 * * *" (daily 06:00 UTC).
+    schedule: text("schedule"),
+    // Webhook event trigger — when the named Sokoni webhook event fires, the
+    // engine spawns a run with the payload. Matches lib/webhooks/events.ts.
+    eventTrigger: text("event_trigger"),
+    // Operator policy: above this confidence/savings threshold the agent
+    // auto-executes; below it, the engine pauses for human approval.
+    autoApproveThreshold: numeric("auto_approve_threshold"),
+    // Hard limits — the engine refuses to exceed these.
+    maxSteps: integer("max_steps").notNull().default(20),
+    maxTokens: integer("max_tokens").notNull().default(50_000),
+    lastRunAt: timestamp("last_run_at"),
+    nextRunAt: timestamp("next_run_at"),
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
+  },
+  (t) => ({
+    wsIdx: index("agent_workspace_idx").on(t.workspaceId),
+    eventIdx: index("agent_event_idx").on(t.eventTrigger),
+    nextRunIdx: index("agent_next_run_idx").on(t.nextRunAt)
+  })
+);
+
+export const agentRuns = pgTable(
+  "agent_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agentId: uuid("agent_id").references(() => agents.id, { onDelete: "cascade" }).notNull(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
+    // queued | running | awaiting_approval | succeeded | failed | cancelled
+    status: text("status").notNull().default("queued"),
+    triggeredBy: text("triggered_by").notNull(), // manual | cron | webhook | api
+    triggeredById: uuid("triggered_by_id").references(() => users.id, { onDelete: "set null" }),
+    triggerPayload: jsonb("trigger_payload"),
+    goal: text("goal"), // user-supplied goal or templated from the trigger
+    summary: text("summary"), // final assistant message
+    error: text("error"),
+    // Resume state for runs that pause on an approval. Holds the committed
+    // Anthropic message array plus the pending assistant turn / partial tool
+    // results so the engine can continue exactly where it stopped.
+    state: jsonb("state").$type<Record<string, unknown>>(),
+    stepCount: integer("step_count").notNull().default(0),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    startedAt: timestamp("started_at"),
+    finishedAt: timestamp("finished_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    agentIdx: index("agent_run_agent_idx").on(t.agentId),
+    wsIdx: index("agent_run_workspace_idx").on(t.workspaceId),
+    statusIdx: index("agent_run_status_idx").on(t.status),
+    createdIdx: index("agent_run_created_idx").on(t.createdAt)
+  })
+);
+
+export const agentSteps = pgTable(
+  "agent_steps",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    runId: uuid("run_id").references(() => agentRuns.id, { onDelete: "cascade" }).notNull(),
+    idx: integer("idx").notNull(), // 0-indexed step number within the run
+    kind: text("kind").notNull(), // llm_text | tool_call | tool_result | approval_request | approval_resolved
+    name: text("name"), // for tool_call/tool_result: the tool name
+    input: jsonb("input"),
+    output: jsonb("output"),
+    durationMs: integer("duration_ms"),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    runIdx: index("agent_step_run_idx").on(t.runId)
+  })
+);
+
+export const agentApprovals = pgTable(
+  "agent_approvals",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    runId: uuid("run_id").references(() => agentRuns.id, { onDelete: "cascade" }).notNull(),
+    stepId: uuid("step_id").references(() => agentSteps.id, { onDelete: "cascade" }).notNull(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
+    question: text("question").notNull(),
+    payload: jsonb("payload"), // what the agent wants to do
+    toolName: text("tool_name"),
+    decidedAt: timestamp("decided_at"),
+    decidedById: uuid("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+    decision: text("decision"), // approve | decline
+    note: text("note"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    runIdx: index("agent_approval_run_idx").on(t.runId),
+    wsIdx: index("agent_approval_workspace_idx").on(t.workspaceId)
+  })
+);
