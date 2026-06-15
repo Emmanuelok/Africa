@@ -528,3 +528,124 @@ export const agentApprovals = pgTable(
     wsIdx: index("agent_approval_workspace_idx").on(t.workspaceId)
   })
 );
+
+// =============================================================================
+// Collaboration — Projects
+// -----------------------------------------------------------------------------
+// A Project is a shared room that people from different workspaces and even
+// different organisations can collaborate in. Two flavours today:
+//   - "trade" : a real shipment/compliance project — co-ordinate a determination
+//               or certificate across exporter, forwarder, and buyer.
+//   - "study" : a learning cohort — students working through the same AfCFTA
+//               topic together, sharing notes and questions.
+// Membership is project-scoped and independent of workspace membership, so an
+// invited friend from another org joins the project without joining your
+// workspace. People join by email invite or by a shareable link.
+// =============================================================================
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    // The workspace that owns/hosts the project (billing + quota anchor).
+    workspaceId: uuid("workspace_id")
+      .references(() => workspaces.id, { onDelete: "cascade" })
+      .notNull(),
+    kind: text("kind").notNull().default("trade"), // trade | study
+    name: text("name").notNull(),
+    topic: text("topic"), // for study rooms: the subject, e.g. "Rules of Origin"
+    description: text("description"),
+    // private = invite/link only; link = anyone with the link can join; the
+    // distinction is enforced at the invite layer.
+    visibility: text("visibility").notNull().default("private"),
+    color: text("color"), // accent for the project card
+    archivedAt: timestamp("archived_at"),
+    settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
+  },
+  (t) => ({
+    wsIdx: index("project_workspace_idx").on(t.workspaceId),
+    kindIdx: index("project_kind_idx").on(t.kind)
+  })
+);
+
+export const projectMembers = pgTable(
+  "project_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .references(() => projects.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    role: text("role").notNull().default("editor"), // owner | editor | viewer
+    // Snapshot of identity at join time — lets us show "Ada from Kano Mills"
+    // without a join, and survives the user editing their profile.
+    displayName: text("display_name"),
+    email: text("email"),
+    organization: text("organization"), // their home workspace / org name
+    joinedVia: text("joined_via").notNull().default("invite"), // owner | link | email | invite
+    lastSeenAt: timestamp("last_seen_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    projectIdx: index("project_member_project_idx").on(t.projectId),
+    userIdx: index("project_member_user_idx").on(t.userId),
+    uniq: index("project_member_uniq_idx").on(t.projectId, t.userId)
+  })
+);
+
+// Shareable join links. A single token can be configured for many uses or a
+// single use, with an optional expiry. Anyone who opens /join/<token> and signs
+// in becomes a project member with the link's role.
+export const projectInvites = pgTable(
+  "project_invites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .references(() => projects.id, { onDelete: "cascade" })
+      .notNull(),
+    token: text("token").notNull().unique(),
+    role: text("role").notNull().default("editor"),
+    // Optional targeted email invite; null = open shareable link.
+    email: text("email"),
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    maxUses: integer("max_uses"), // null = unlimited
+    uses: integer("uses").notNull().default(0),
+    expiresAt: timestamp("expires_at"),
+    revokedAt: timestamp("revoked_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    projectIdx: index("project_invite_project_idx").on(t.projectId)
+  })
+);
+
+// The collaborative feed: messages, shared notes, pinned resources, and system
+// events (member joined, resource attached). One table keeps the room timeline
+// simple; `kind` discriminates rendering.
+export const projectEvents = pgTable(
+  "project_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .references(() => projects.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    authorName: text("author_name"), // identity snapshot for display
+    kind: text("kind").notNull().default("message"), // message | note | resource | system | question | answer
+    body: text("body"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    // Optional links to platform records shared into the room.
+    determinationId: uuid("determination_id").references(() => determinations.id, { onDelete: "set null" }),
+    certificateId: uuid("certificate_id").references(() => certificates.id, { onDelete: "set null" }),
+    pinned: boolean("pinned").notNull().default(false),
+    editedAt: timestamp("edited_at"),
+    deletedAt: timestamp("deleted_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+  },
+  (t) => ({
+    projectIdx: index("project_event_project_idx").on(t.projectId),
+    createdIdx: index("project_event_created_idx").on(t.createdAt)
+  })
+);
