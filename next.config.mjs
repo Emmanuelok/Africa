@@ -3,11 +3,18 @@ import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  compress: true,
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "flagcdn.com" }
     ]
+  },
+  experimental: {
+    // Tree-shake heavy barrels — only the icons / utilities we actually use
+    // end up in the client bundle.
+    optimizePackageImports: ["lucide-react", "date-fns", "d3-geo"]
   }
 };
 

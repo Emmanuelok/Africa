@@ -12,7 +12,7 @@ export default async function ProjectsPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="font-display text-2xl font-semibold md:text-3xl">Projects</h1>
-            <span className="rounded-full bg-gradient-to-r from-savanna-500 to-terracotta-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            <span className="sticker rounded-full px-2 py-0.5 text-[10px] font-bold uppercase">
               Collaborate
             </span>
           </div>

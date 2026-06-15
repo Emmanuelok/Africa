@@ -29,7 +29,7 @@ export default function HomePage() {
   return (
     <>
       {/* HERO — AfriOrigin first */}
-      <section className="bg-hero-gradient">
+      <section className="bg-aurora">
         <div className="mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
           <div className="grid items-center gap-12 md:grid-cols-2">
             <div className="animate-fade-up">
@@ -60,7 +60,16 @@ export default function HomePage() {
 
             {/* Mock wizard preview */}
             <div className="relative animate-fade-in">
-              <div className="rounded-3xl border border-ink-200 bg-white p-6 shadow-xl">
+              {/* Ambient glow halo behind the card */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -inset-8 rounded-[2.5rem] opacity-50 blur-3xl"
+                style={{
+                  background:
+                    "radial-gradient(50% 50% at 50% 50%, rgba(212,85,42,0.22) 0%, transparent 70%)"
+                }}
+              />
+              <div className="relative rounded-3xl glass p-6 shadow-xl">
                 <div className="flex items-center justify-between text-xs uppercase tracking-wide text-ink-500">
                   <span>{t(locale, "hero.preview.step")}</span>
                   <Badge tone="success"><CheckCircle2 className="h-3 w-3" /> {t(locale, "hero.preview.qualifies")}</Badge>

@@ -15,7 +15,7 @@ export default async function AgentsPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="font-display text-2xl font-semibold md:text-3xl">Agents</h1>
-            <span className="rounded-full bg-gradient-to-r from-terracotta-500 to-savanna-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            <span className="sticker rounded-full px-2 py-0.5 text-[10px] font-bold uppercase">
               Autopilot
             </span>
           </div>

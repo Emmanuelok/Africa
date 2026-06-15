@@ -201,12 +201,32 @@ function Metric({
   accent?: boolean;
 }) {
   return (
-    <Card className={accent ? "border-savanna-300 bg-savanna-50/40" : ""}>
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-ink-500">
+    <Card
+      className={
+        accent
+          ? "relative overflow-hidden border-savanna-300 bg-gradient-to-br from-savanna-50 to-white"
+          : "spotlight"
+      }
+    >
+      {accent && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-savanna-200/40 blur-2xl"
+        />
+      )}
+      <div className="relative flex items-center gap-2 text-xs uppercase tracking-wide text-ink-500">
         {icon} {label}
       </div>
-      <div className="mt-2 font-display text-2xl font-semibold">{value}</div>
-      <div className="mt-1 text-xs text-ink-600">{sub}</div>
+      <div
+        className={
+          accent
+            ? "relative mt-2 font-display text-2xl font-semibold text-savanna-800 md:text-3xl"
+            : "relative mt-2 font-display text-2xl font-semibold"
+        }
+      >
+        {value}
+      </div>
+      <div className="relative mt-1 text-xs text-ink-600">{sub}</div>
     </Card>
   );
 }

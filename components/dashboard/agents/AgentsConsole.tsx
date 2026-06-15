@@ -127,20 +127,18 @@ export function AgentsConsole({ canManage, isDemo }: { canManage: boolean; isDem
                 key={a.id}
                 type="button"
                 onClick={() => setOpenId(a.id)}
-                className="group relative overflow-hidden rounded-2xl border border-ink-200 bg-white p-5 text-left shadow-[0_1px_2px_rgba(15,15,14,0.04)] transition-all hover:-translate-y-0.5 hover:border-terracotta-300 hover:shadow-lg"
+                className="group spotlight relative overflow-hidden rounded-2xl border border-ink-200 bg-white p-5 text-left shadow-[0_1px_2px_rgba(15,15,14,0.04)] transition-all hover:-translate-y-0.5 hover:border-terracotta-300 hover:shadow-lg"
               >
                 <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br from-terracotta-50 to-transparent opacity-60 transition-opacity group-hover:opacity-100" />
                 <div className="relative flex items-start justify-between">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-terracotta-500 to-terracotta-700 text-white shadow-sm">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <span
-                    className={cn(
-                      "h-2.5 w-2.5 rounded-full",
-                      a.enabled ? "bg-green-500 shadow-[0_0_0_3px_rgba(34,197,94,0.15)]" : "bg-ink-300"
-                    )}
-                    title={a.enabled ? "Active" : "Paused"}
-                  />
+                  {a.enabled ? (
+                    <span className="pulse-dot" title="Active" />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-ink-300" title="Paused" />
+                  )}
                 </div>
                 <h3 className="relative mt-3 font-display text-base font-semibold text-ink-900">{a.name}</h3>
                 <p className="relative mt-1 line-clamp-2 text-sm text-ink-500">{a.description}</p>

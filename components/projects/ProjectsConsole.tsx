@@ -95,7 +95,7 @@ function ProjectCard({ project }: { project: ProjectView }) {
   return (
     <Link
       href={`/dashboard/projects/${project.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,15,14,0.04)] transition-all hover:-translate-y-0.5 hover:border-terracotta-300 hover:shadow-lg"
+      className="group spotlight relative flex flex-col overflow-hidden rounded-2xl border border-ink-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,15,14,0.04)] transition-all hover:-translate-y-0.5 hover:border-terracotta-300 hover:shadow-lg"
     >
       {/* Accent wash */}
       <div
